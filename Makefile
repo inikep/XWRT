@@ -2,16 +2,17 @@
 BUILD_ARCH = 64-bit
 
 ifeq ($(BUILD_SYSTEM),linux)
-	LDFLAGS = -lrt
+    DEFINES	+= -D_POSIX_ENVIRONMENT_ -DZ_HAVE_UNISTD_H
+    LDFLAGS = -lrt
 	GCC		= gcc
 	GPP		= g++
 else
+    DEFINES	+= - D_WIN32_ENVIRONMENT_
 #	DEFINES = -march=core2 -march=nocona -march=k8 -march=native
 	LDFLAGS	= -lshell32 -lole32 -loleaut32 
 	GCC		= gcc.exe
 	GPP		= g++.exe
 endif
-
 
 ifeq ($(BUILD_ARCH),64-bit)
 	DEFINES	+= -D__x86_64__
@@ -44,7 +45,7 @@ PPMD_FILES = PPMd/Model.o PPMd/PPMdlib.o
 ZLIB_FILES = zlib/adler32.o zlib/compress.o zlib/crc32.o zlib/deflate.o zlib/gzclose.o zlib/gzlib.o zlib/gzread.o
 ZLIB_FILES += zlib/gzwrite.o zlib/infback.o zlib/inffast.o zlib/inflate.o zlib/inftrees.o zlib/trees.o zlib/uncompr.o zlib/zutil.o
 
-xwrt: $(ZLIB_FILES) XWRT/XWRT.o XWRT/Encoder.o XWRT/Decoder.o XWRT/MemBuffer.o XWRT/Common.o $(PPMD_FILES)
+xwrt: $(ZLIB_FILES) src/XWRT.o src/Encoder.o src/Decoder.o src/MemBuffer.o src/Common.o $(PPMD_FILES)
 	$(GPP) $^ -o $@ $(LDFLAGS)
 
 .c.o:
@@ -57,4 +58,4 @@ xwrt: $(ZLIB_FILES) XWRT/XWRT.o XWRT/Encoder.o XWRT/Decoder.o XWRT/MemBuffer.o X
 	$(GPP) $(CFLAGS) $< -c -o $@
 
 clean:
-	rm -f XWRT/*.o PPMd/*.o *.o *.exe
+	rm -f zlib/*.o src/*.o PPMd/*.o *.o *.exe

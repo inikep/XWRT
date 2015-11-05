@@ -20,7 +20,6 @@ compression ratio:
 
 
 
-
 Usage
 -----------------
 
@@ -28,8 +27,8 @@ Usage
 Usage: XWRT.exe [options] <file1> [file2] [file3] ...
  where <file> is a XML file or a XWRT compressed file (it's auto-detected)
              you can also use wildcards (e.g., "*.xml")
- GENERAL OPTIONS (which also set default additional options):
-  -i = Delete input files
+
+GENERAL OPTIONS (which also set default additional options):
   -l0 = no compression (memory usage up to 16 MB)
   -l1 = zlib fast (memory usage 16+1 MB)
   -l2 = zlib normal (default, memory usage 16+1 MB)
@@ -45,22 +44,28 @@ Usage: XWRT.exe [options] <file1> [file2] [file3] ...
   -l12 = lpaq6 model size 406 MB (memory usage 16+390 MB)
   -l13 = lpaq6 model size 790 MB (memory usage 16+774 MB)
   -l14 = lpaq6 model size 1560 MB (memory usage 16+1542 MB)
+  -0 = preprocessed and uncompressed output optimized for further LZ77 compression
+  -1 = preprocessed and uncompressed output optimized for further LZMA compression
+  -2 = preprocessed and uncompressed output optimized for further PPM compression
+  -3 = preprocessed and uncompressed output optimized for further PAQ compression
 
-  -o = Force overwrite of output files
- ADDITIONAL OPTIONS:
+ADDITIONAL OPTIONS:
   -bX = Set maximum buffer size while creating dynamic dictionary to X MB
   -c = Turn off containers (without number and word containers)
   +d = Turn on usage of the static dictionary (requires wrt-eng.dic,
        which is available at http://pskibinski.pl/research)
   -eX = Set maximum dictionary size to X words
   -fX = Set minimal word frequency to X
+  -i = Delete input files
   -mX = Set maximum memory buffer size to X MB (default=8)
   -n = Turn off number containers
+  -o = Force overwrite of output files
   -pX = Preprocess only (file_size/X) bytes in a first pass
   -s = Turn off spaces modeling option
   -t = Turn off "try shorter word" option
   -w = Turn off word containers
 ```
+
 
 
 Used libraries

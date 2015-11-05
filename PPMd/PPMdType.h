@@ -11,7 +11,7 @@
 #include <stdio.h>
 #include <assert.h>
 
-#define _WIN32_ENVIRONMENT_
+//#define _WIN32_ENVIRONMENT_
 //#define _DOS32_ENVIRONMENT_
 //#define _POSIX_ENVIRONMENT_
 //#define _UNKNOWN_ENVIRONMENT_

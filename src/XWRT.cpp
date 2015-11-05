@@ -348,7 +348,7 @@ void usage()
 	printf("  -pX = Preprocess only (file_size/X) bytes in a first pass\n");
 	printf("  -s = Turn off spaces modeling option\n");
 	printf("  -t = Turn off \"try shorter word\" option\n");
-	printf("  -w = Turn off word containers");
+	printf("  -w = Turn off word containers\n");
 }
 
 

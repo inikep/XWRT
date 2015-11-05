@@ -16,6 +16,11 @@
 #define ADD_FILENAME_EXT ".xwrt" 
 #define CUT_FILENAME_CHAR '.'
 
+#define USE_ZLIB_LIBRARY
+//	#define USE_LZMA_LIBRARY
+#define USE_PPMD_LIBRARY
+#define USE_PAQ_LIBRARY
+
 #define PRINT_CHARS(data) ;//printf data
 #define PRINT_CODEWORDS(data) ;//printf data
 #define PRINT_STACK(data) ;//printf data
@@ -35,16 +40,8 @@
 
 
 #ifdef WINDOWS
-#if !defined WIN64
-//	#define USE_LZMA_LIBRARY
-#endif
-	#define USE_ZLIB_LIBRARY
-	#define USE_PPMD_LIBRARY
-	#define USE_PAQ_LIBRARY
 	#define getch _getch
 #else
-	#define USE_ZLIB_LIBRARY
-	#define USE_PAQ_LIBRARY
 	#define getch getchar
 #endif
 
