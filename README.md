@@ -1,22 +1,22 @@
 Introduction
 -----------------
 
-XWRT (XML-WRT) is an efficient XML compressor (actually it works with all textual files). 
+XWRT (XML-WRT) is an efficient XML/HTML compressor (actually it works well with all textual files). 
 It transforms XML to more
 compressible form and uses zlib (default), LZMA, PPMd, or lpaq6 as 
 back-end compressor. This idea is based on well-known XML compressor - XMill.
 Moreover, XML-WRT creates a semi-dynamic dictionary and replaces frequently 
 used words with shorter codes. There are additional techniques to improve
 compression ratio:
--word alphabet can consist of start tags (like '<tag>'), urls, e-mails
--special model for numbers encoding
--input XML file is split into containers
--there are special containers for dates, time, pages and fractional numbers
--end tags ('</tag>') are replaced with a single char
--end tags + EOL symbols can also be replaced with a single char
--spaceless words model
--very effective methods for white-space preserving
--quotes modeling ('="' and '">' replaced with a single char) 
+- word alphabet can consist of start tags (like '<tag>'), urls, e-mails
+- special model for numbers encoding
+- input XML file is split into containers
+- there are special containers for dates, time, pages and fractional numbers
+- end tags ('</tag>') are replaced with a single char
+- end tags + EOL symbols can also be replaced with a single char
+- spaceless words model
+- very effective methods for white-space preserving
+- quotes modeling ('="' and '">' replaced with a single char) 
 
 
 
@@ -24,6 +24,7 @@ compression ratio:
 Usage
 -----------------
 
+```
 Usage: XWRT.exe [options] <file1> [file2] [file3] ...
  where <file> is a XML file or a XWRT compressed file (it's auto-detected)
              you can also use wildcards (e.g., "*.xml")
@@ -59,12 +60,14 @@ Usage: XWRT.exe [options] <file1> [file2] [file3] ...
   -s = Turn off spaces modeling option
   -t = Turn off "try shorter word" option
   -w = Turn off word containers
+```
 
 
 Used libraries
 ---------------------
-
+```
 zlib  (C) 1995-2005 Jean-loup Gailly and Mark Adler 
 LZMA  (C) 1999-2006 Igor Pavlov
 PPMd (C) 1997-2006 Dmitry Shkarin
 lpaq6  (C) 2007 Matt Mahoney and Alexander Ratushnyak
+```
