@@ -39,8 +39,13 @@ CFLAGS = $(CODE_FLAGS) $(OPT_FLAGS) $(DEFINES)
 
 all: xwrt
 
+PPMD_FILES = PPMd/Model.o PPMd/PPMdlib.o 
 
-xwrt: XWRT/XWRT.o XWRT/Encoder.o XWRT/Decoder.o XWRT/MemBuffer.o XWRT/Common.o
+ZLIB_FILES = zlib/adler32.o zlib/compress.o zlib/crc32.o zlib/deflate.o zlib/gzclose.o zlib/gzlib.o zlib/gzread.o
+ZLIB_FILES += zlib/gzwrite.o zlib/infback.o zlib/inffast.o zlib/inflate.o zlib/inftrees.o zlib/trees.o
+ZLIB_FILES += zlib/uncompr.o zlib/zutil.o
+
+xwrt: XWRT/XWRT.o XWRT/Encoder.o XWRT/Decoder.o XWRT/MemBuffer.o XWRT/Common.o $(PPMD_FILES) $(ZLIB_FILES)
 	$(GPP) $^ -o $@ $(LDFLAGS)
 
 .c.o:
@@ -53,4 +58,4 @@ xwrt: XWRT/XWRT.o XWRT/Encoder.o XWRT/Decoder.o XWRT/MemBuffer.o XWRT/Common.o
 	$(GPP) $(CFLAGS) $< -c -o $@
 
 clean:
-	rm -f XWRT/*.o *.o *.exe
+	rm -f XWRT/*.o PPMd/*.o *.o *.exe

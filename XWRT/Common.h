@@ -24,7 +24,7 @@ public:
 	int preprocFlag;
 
 protected:
-	void init_PPMVC(int fileSizeInMB,int mode);
+	void init_PPMD(int fileSizeInMB,int mode);
 	inline void stringHash(const unsigned char *ptr, int len,int& hash);
 	int addWord(unsigned char* &mem,int &i);
 	unsigned char* loadDynamicDictionary(unsigned char* mem,unsigned char* mem_end);
@@ -45,7 +45,7 @@ protected:
 	EWordType subWordType;
 	bool decoding,fileCorrupted,detect,firstWarn;
 	int maxDynDictBuf,minWordFreq,compLevel,maxDictSize,additionalParam,firstPassBlock;
-	int tryShorterBound,spaces,fileLenMB,beforeWord,PPMVClib_order;
+	int tryShorterBound,spaces,fileLenMB,beforeWord,PPMDlib_order;
 	int spacesCodeword[256];
 	int spacesCont[256];
 	std::vector<std::string> sortedDict;

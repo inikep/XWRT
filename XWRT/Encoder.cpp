@@ -44,7 +44,7 @@ XWRT_Encoder::~XWRT_Encoder()
 		if (cont.memout->memsize>maxMemSize) \
 		{ \
 			PRINT_DICT(("%d maxMemSize=%d\n",cont.memout->memsize,maxMemSize)); \
-			cont.writeMemBuffers(preprocFlag,PPMVClib_order,additionalParam,PAQ_encoder,zlibBuffer,outStream); \
+			cont.writeMemBuffers(preprocFlag,PPMDlib_order,additionalParam,PAQ_encoder,zlibBuffer,outStream); \
 			cont.memout->memsize=0; \
 		} \
  \
@@ -2432,12 +2432,10 @@ void XWRT_Encoder::write_dict(int comprLevel)
 	}
 	else
 #endif
-#ifdef USE_PPMVC_LIBRARY
-	if (IF_OPTION(OPTION_PPMVC))
+#ifdef USE_PPMD_LIBRARY
+	if (IF_OPTION(OPTION_PPMD))
 	{
-		int last=ftell(XWRT_fileout);
-		PPMVClib_EncodeMemToFile(PPMVClib_order,writeBuffer+3,count,XWRT_fileout);
-		printStatus(0,ftell(XWRT_fileout)-last,true);
+		PPMDlib_EncodeMemToFile(PPMDlib_order,writeBuffer+3,count,XWRT_fileout);
 	}
 	else
 #endif
@@ -2467,7 +2465,7 @@ void XWRT_Encoder::WRT_get_options(int& c,int& c2)
 		c=c+64;
 	if (IF_OPTION(OPTION_ZLIB))
 		c=c+32;
-	if (IF_OPTION(OPTION_PPMVC))
+	if (IF_OPTION(OPTION_PPMD))
 		c=c+16;
 	if (IF_OPTION(OPTION_LZMA))
 		c=c+8;
@@ -2516,7 +2514,7 @@ void XWRT_Encoder::WRT_start_encoding(unsigned int fileLen,bool type_detected)
 	if (fileLenMB>255*256)
 		fileLenMB=255*256;
 	g_fileLenMB=fileLenMB;
-	init_PPMVC(fileLenMB,COMPRESS);
+	init_PPMD(fileLenMB,COMPRESS);
 
 	cont.prepareMemBuffers();
 	cont.memout->memsize=0;
@@ -2575,7 +2573,7 @@ void XWRT_Encoder::WRT_start_encoding(unsigned int fileLen,bool type_detected)
 			ENCODE_PUTC(c);
 		}
 
-		cont.writeMemBuffers(preprocFlag,PPMVClib_order,additionalParam,PAQ_encoder,zlibBuffer,outStream);
+		cont.writeMemBuffers(preprocFlag,PPMDlib_order,additionalParam,PAQ_encoder,zlibBuffer,outStream);
 		cont.freeMemBuffers(true);
 
 #ifdef USE_PAQ_LIBRARY
@@ -2620,7 +2618,7 @@ void XWRT_Encoder::WRT_start_encoding(unsigned int fileLen,bool type_detected)
 
 	WRT_encode(getcBufferSize);
 
-	cont.writeMemBuffers(preprocFlag,PPMVClib_order,additionalParam,PAQ_encoder,zlibBuffer,outStream);
+	cont.writeMemBuffers(preprocFlag,PPMDlib_order,additionalParam,PAQ_encoder,zlibBuffer,outStream);
 
 	cont.freeMemBuffers(true);
 

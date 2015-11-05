@@ -45,8 +45,8 @@ XWRT_Common::~XWRT_Common()
 
 	WRT_deinitialize(); 
 
-#ifdef USE_PPMVC_LIBRARY
-	PPMVClib_Deinit(); 
+#ifdef USE_PPMD_LIBRARY
+	PPMDlib_Deinit(); 
 #endif
 }
 
@@ -712,27 +712,23 @@ void XWRT_Common::WRT_print_options()
 	PRINT_DICT(("prepType=%d\n",preprocType));
 }
 
-void XWRT_Common::init_PPMVC(int fileSizeInMB,int mode)
+void XWRT_Common::init_PPMD(int fileSizeInMB,int mode)
 {
-#ifdef USE_PPMVC_LIBRARY
+#ifdef USE_PPMD_LIBRARY
 
-	if (IF_OPTION(OPTION_PPMVC)) // preprocType==PPM
+	if (IF_OPTION(OPTION_PPMD)) // preprocType==PPM
 	{
-		PPMVClib_Deinit();
+		PPMDlib_Deinit();
 
-		if (additionalParam>=64) 
-			PPMVClib_Init(additionalParam,4); // 8=nasa
-		else
-			PPMVClib_Init(additionalParam,2);
-
+		PPMDlib_Init(additionalParam);
 
 		if (fileSizeInMB>=23)
-			PPMVClib_order=6;
+			PPMDlib_order=6;
 		else
 		if (fileSizeInMB>=7)
-			PPMVClib_order=8;
+			PPMDlib_order=8;
 		else
-			PPMVClib_order=10;
+			PPMDlib_order=10;
 	}
 #endif
 
@@ -783,18 +779,18 @@ void XWRT_Common::getAlgName(std::string& compName)
 #endif
 	}
 	else
-	if (IF_OPTION(OPTION_PPMVC))
+	if (IF_OPTION(OPTION_PPMD))
 	{
 		if (additionalParam==16)
-			compName="PPMVC 16MB";
+			compName="PPMD 16MB";
 		else
 		if (additionalParam==32)
-			compName="PPMVC 32MB";
+			compName="PPMD 32MB";
 		else
-			compName="PPMVC 64MB";
+			compName="PPMD 64MB";
 
-#ifndef USE_PPMVC_LIBRARY
-		printf("PPMVC compression not supported (in this compilation of XWRT)!\n");
+#ifndef USE_PPMD_LIBRARY
+		printf("PPMD compression not supported (in this compilation of XWRT)!\n");
 		exit(0);
 #endif
 	}
@@ -960,7 +956,7 @@ int XWRT_Common::defaultSettings(int argc, char* argv[])
 
 					TURN_OFF(OPTION_ZLIB);
 					TURN_OFF(OPTION_LZMA);
-					TURN_OFF(OPTION_PPMVC);
+					TURN_OFF(OPTION_PPMD);
 					TURN_OFF(OPTION_PAQ);
 
 					switch (compLevel)
@@ -1012,11 +1008,11 @@ int XWRT_Common::defaultSettings(int argc, char* argv[])
 							printf("warning: LZMA compression not supported in this compilation!\n");
 							break;
 #endif
-#ifdef USE_PPMVC_LIBRARY
+#ifdef USE_PPMD_LIBRARY
 						case 7:
 						case 8:
 						case 9:
-							TURN_ON(OPTION_PPMVC);
+							TURN_ON(OPTION_PPMD);
 							newPreprocType=PPM;
 
 							if (compLevel==7)
@@ -1043,7 +1039,7 @@ int XWRT_Common::defaultSettings(int argc, char* argv[])
 						case 7:
 						case 8:
 						case 9:
-							printf("warning: PPMVC compression not supported in this compilation!\n");
+							printf("warning: PPMD compression not supported in this compilation!\n");
 							break;
 #endif
 #ifdef USE_PAQ_LIBRARY
@@ -1148,7 +1144,7 @@ int XWRT_Common::defaultSettings(int argc, char* argv[])
 			case '3':
 				TURN_OFF(OPTION_ZLIB);
 				TURN_OFF(OPTION_LZMA);
-				TURN_OFF(OPTION_PPMVC);
+				TURN_OFF(OPTION_PPMD);
 				TURN_OFF(OPTION_PAQ);
 
 				if (firstTime)

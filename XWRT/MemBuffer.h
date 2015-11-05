@@ -44,8 +44,8 @@ class CContainers
 public:
 	CContainers();
 	void prepareMemBuffers();
-	void writeMemBuffers(int preprocFlag, int PPMVClib_order, int comprLevel, Encoder* PAQ_encoder, unsigned char* zlibBuffer,COutFileStream* outStream);
-	void readMemBuffers(int preprocFlag, int maxMemSize, int PPMVClib_order, Encoder* PAQ_encoder, unsigned char* zlibBuffer,CInFileStream* inStream);
+	void writeMemBuffers(int preprocFlag, int PPMDlib_order, int comprLevel, Encoder* PAQ_encoder, unsigned char* zlibBuffer,COutFileStream* outStream);
+	void readMemBuffers(int preprocFlag, int maxMemSize, int PPMDlib_order, Encoder* PAQ_encoder, unsigned char* zlibBuffer,CInFileStream* inStream);
 	void freeMemBuffers(bool freeMem);
 	void selectMemBuffer(unsigned char* s,int s_size);
 	void MemBufferPopBack();

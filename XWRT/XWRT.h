@@ -9,8 +9,8 @@
 #define _FILE_OFFSET_BITS 64  // turn off_t into a 64-bit type for ftello() and fseeko()
 //#include <inttypes.h> 
 
-#define PRG_NAME "XWRT 3.2 (29.10.2007) - XML compressor by P.Skibinski, inikep@gmail.com"
-#define XWRT_VERSION 320 // 150-405
+#define PRG_NAME "XWRT 3.4 (5.11.2007) - XML compressor by P.Skibinski, inikep@gmail.com"
+#define XWRT_VERSION 340 // 150-405
 
 #define XWRT_HEADER "XWRC"
 #define ADD_FILENAME_EXT ".xwrt" 
@@ -36,10 +36,10 @@
 
 #ifdef WINDOWS
 #if !defined WIN64
-	#define USE_ZLIB_LIBRARY
 //	#define USE_LZMA_LIBRARY
-//	#define USE_PPMVC_LIBRARY
 #endif
+	#define USE_ZLIB_LIBRARY
+	#define USE_PPMD_LIBRARY
 	#define USE_PAQ_LIBRARY
 	#define getch _getch
 #else
@@ -58,13 +58,11 @@
 #endif
 
 #ifdef USE_ZLIB_LIBRARY
-	#include <zlib.h>
-	#pragma comment (lib, "zlib.lib")
+	#include "zlib/zlib.h"
 #endif
 
-#ifdef USE_PPMVC_LIBRARY
-	#include <PPMVClib.h>
-	#pragma comment (lib, "PPMVClib.lib")
+#ifdef USE_PPMD_LIBRARY
+	#include "PPMd/PPMdlib.h"
 #endif
 
 #ifdef USE_PAQ_LIBRARY
@@ -102,7 +100,7 @@ class Encoder;
 #define OPTION_ADD_SYMBOLS_MISC				32
 #define OPTION_ZLIB							64
 #define OPTION_LZMA							128
-#define OPTION_PPMVC						256
+#define OPTION_PPMD						256
 #define OPTION_PAQ							512
 #define OPTION_USE_DICTIONARY				1024
 #define OPTION_CRLF							2048

@@ -102,7 +102,7 @@ XWRT_Decoder::~XWRT_Decoder()
 	if (cont.memout->memsize>maxMemSize) \
 	{ \
 		PRINT_DICT(("%d maxMemSize=%d\n",cont.memout->memsize,maxMemSize)); \
-		cont.readMemBuffers(preprocFlag,maxMemSize,PPMVClib_order,PAQ_encoder,zlibBuffer,inStream); \
+		cont.readMemBuffers(preprocFlag,maxMemSize,PPMDlib_order,PAQ_encoder,zlibBuffer,inStream); \
 		cont.memout->memsize=0; \
 	} \
  \
@@ -1225,11 +1225,11 @@ void XWRT_Decoder::read_dict()
 	}
 	else
 #endif
-#ifdef USE_PPMVC_LIBRARY
-	if (IF_OPTION(OPTION_PPMVC))
+#ifdef USE_PPMD_LIBRARY
+	if (IF_OPTION(OPTION_PPMD))
 	{
 		int last=ftell(XWRT_file);
-		PPMVClib_DecodeFileToMem(PPMVClib_order,XWRT_file,bufferData,HASH_TABLE_SIZE*sizeof(word_hash[0])-6);
+		PPMDlib_DecodeFileToMem(PPMDlib_order,XWRT_file,bufferData,HASH_TABLE_SIZE*sizeof(word_hash[0])-6);
 		printStatus(ftell(XWRT_file)-last,0,false);
 	}
 	else
@@ -1328,9 +1328,9 @@ void XWRT_Decoder::WRT_set_options(char c,char c2)
 		TURN_ON(OPTION_ZLIB);
 
 	if ((c&16)==0)
-		TURN_OFF(OPTION_PPMVC)
+		TURN_OFF(OPTION_PPMD)
 	else
-		TURN_ON(OPTION_PPMVC);
+		TURN_ON(OPTION_PPMD);
 
 	if ((c&8)==0)
 		TURN_OFF(OPTION_LZMA)
@@ -1426,7 +1426,7 @@ void XWRT_Decoder::WRT_start_decoding(int c,char* filename,char* filenameOut)
 	printf("- decoding %s (%s) to %s\n",filename,compName.c_str(),filenameOut);
 
 
-	init_PPMVC(fileLenMB,DECOMPRESS);
+	init_PPMD(fileLenMB,DECOMPRESS);
 
 
 	WRT_print_options();
@@ -1436,7 +1436,7 @@ void XWRT_Decoder::WRT_start_decoding(int c,char* filename,char* filenameOut)
 
 	if (IF_OPTION(OPTION_BINARY_DATA))
 	{
-		cont.readMemBuffers(preprocFlag,maxMemSize,PPMVClib_order,PAQ_encoder,zlibBuffer,inStream);
+		cont.readMemBuffers(preprocFlag,maxMemSize,PPMDlib_order,PAQ_encoder,zlibBuffer,inStream);
 		cont.memout->memsize=0;
 
 		putcBufferData=&putcBuffer[0];
@@ -1532,7 +1532,7 @@ void XWRT_Decoder::WRT_start_decoding(int c,char* filename,char* filenameOut)
 		strcpy((char*)s,(char*)dictPath);
 	}
 
-	cont.readMemBuffers(preprocFlag,maxMemSize,PPMVClib_order,PAQ_encoder,zlibBuffer,inStream);
+	cont.readMemBuffers(preprocFlag,maxMemSize,PPMDlib_order,PAQ_encoder,zlibBuffer,inStream);
 	cont.memout->memsize=0;
 
 	WRT_deinitialize();

@@ -1,6 +1,7 @@
 #include "XWRT.h"
 #include "MemBuffer.h"
 #include <stdlib.h> 
+#include <stdint.h> 
 #include <memory.h>
 #include "Common.h"
 
@@ -233,7 +234,7 @@ void CContainers::prepareMemBuffers()
 	memmap.insert(p29);
 }
 
-void CContainers::writeMemBuffers(int preprocFlag, int PPMVClib_order, int comprLevel, Encoder* PAQ_encoder, unsigned char* zlibBuffer,COutFileStream* outStream)
+void CContainers::writeMemBuffers(int preprocFlag, int PPMDlib_order, int comprLevel, Encoder* PAQ_encoder, unsigned char* zlibBuffer,COutFileStream* outStream)
 {
 	std::map<std::string,CMemoryBuffer*>::iterator it;
 
@@ -334,12 +335,10 @@ void CContainers::writeMemBuffers(int preprocFlag, int PPMVClib_order, int compr
 				}
 				else
 #endif
-#ifdef USE_PPMVC_LIBRARY
-				if (IF_OPTION(OPTION_PPMVC))
+#ifdef USE_PPMD_LIBRARY
+				if (IF_OPTION(OPTION_PPMD))
 				{
-					int last=ftell(XWRT_fileout);
-					PPMVClib_EncodeMemToFile(PPMVClib_order,b->TargetBuf,fileLen,XWRT_fileout);
-					printStatus(0,ftell(XWRT_fileout)-last,true);
+					PPMDlib_EncodeMemToFile(PPMDlib_order,b->TargetBuf,fileLen,XWRT_fileout);
 				}
 				else
 #endif
@@ -382,7 +381,7 @@ void CContainers::writeMemBuffers(int preprocFlag, int PPMVClib_order, int compr
 	prepareMemBuffers();
 }
 
-void CContainers::readMemBuffers(int preprocFlag, int maxMemSize, int PPMVClib_order, Encoder* PAQ_encoder, unsigned char* zlibBuffer,CInFileStream* inStream)
+void CContainers::readMemBuffers(int preprocFlag, int maxMemSize, int PPMDlib_order, Encoder* PAQ_encoder, unsigned char* zlibBuffer,CInFileStream* inStream)
 {
 	unsigned char* buf=NULL;
 	unsigned int bufLen=0;
@@ -393,7 +392,7 @@ void CContainers::readMemBuffers(int preprocFlag, int maxMemSize, int PPMVClib_o
 	int i,c;
 	unsigned char s[STRING_MAX_SIZE];
 
-	if (IF_OPTION(OPTION_ZLIB) || IF_OPTION(OPTION_LZMA) || IF_OPTION(OPTION_PPMVC) || IF_OPTION(OPTION_PAQ))
+	if (IF_OPTION(OPTION_ZLIB) || IF_OPTION(OPTION_LZMA) || IF_OPTION(OPTION_PPMD) || IF_OPTION(OPTION_PAQ))
 	{
 		bufLen=maxMemSize+10240;
 		if (bigBuffer==NULL)
@@ -580,12 +579,10 @@ void CContainers::readMemBuffers(int preprocFlag, int maxMemSize, int PPMVClib_o
 			}
 			else
 #endif
-#ifdef USE_PPMVC_LIBRARY
-			if (IF_OPTION(OPTION_PPMVC))
+#ifdef USE_PPMD_LIBRARY
+			if (IF_OPTION(OPTION_PPMD))
 			{
-				int last=ftell(XWRT_file);
-				fileLen=PPMVClib_DecodeFileToMem(PPMVClib_order,XWRT_file,buf,bufLen);
-				printStatus(ftell(XWRT_file)-last,0,false);
+				fileLen=PPMDlib_DecodeFileToMem(PPMDlib_order,XWRT_file,buf,bufLen);
 
 				memout_tmp->SetSrcBuf(buf, fileLen);
 				buf+=fileLen+3;
@@ -606,7 +603,7 @@ void CContainers::readMemBuffers(int preprocFlag, int maxMemSize, int PPMVClib_o
 				buf+=fileLen;
 				len+=fileLen;
 				lenCompr+=i;
-				bufLen-=fileLen;			
+				bufLen-=fileLen;
 			}
 			else
 #endif
@@ -691,7 +688,7 @@ int Zlib_compress(FILE* fileout,Byte *uncompr, uLong uncomprLen,Byte *compr, uLo
 	do
 	{
 	    err = deflate(&c_stream, Z_FINISH);
-		fprintf(fileout, "%c%c%c", (c_stream.total_out>>16)%256, (c_stream.total_out>>8)%256, (c_stream.total_out)%256);
+		fprintf(fileout, "%c%c%c", (uint8_t)(c_stream.total_out>>16)%256, (uint8_t)(c_stream.total_out>>8)%256, (uint8_t)(c_stream.total_out)%256);
 		fwrite_fast(compr, c_stream.total_out, fileout);
 		outSize+=c_stream.total_out;
 		printStatus(0,c_stream.total_out,true);
@@ -734,7 +731,7 @@ int Zlib_decompress(FILE* file,Byte *compr, uLong comprLen,Byte *uncompr, uLong 
 
 		if ((int)comprLen<fileLen)
 		{
-			printf("error: comprLen(%d)<fileLen(%d)\n",comprLen,fileLen);
+			printf("error: comprLen(%d)<fileLen(%d)\n",(int)comprLen,(int)fileLen);
 			OUT_OF_MEMORY();
 		}
 

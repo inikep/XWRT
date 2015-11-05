@@ -313,14 +313,14 @@ void usage()
 #ifdef USE_ZLIB_LIBRARY
 	printf("; 1,2,3=zlib [fast,normal(default),best]");
 #endif
-#if defined(USE_LZMA_LIBRARY) || defined(USE_PPMVC_LIBRARY) || defined(USE_PAQ_LIBRARY)
+#if defined(USE_LZMA_LIBRARY) || defined(USE_PPMD_LIBRARY) || defined(USE_PAQ_LIBRARY)
 	printf(";\n     ");
 #endif
 #ifdef USE_LZMA_LIBRARY
 	printf("4,5,6=LZMA [64 KB, 1 MB, 8 MB]; ");
 #endif
-#ifdef USE_PPMVC_LIBRARY
-	printf("7,8,9=PPMVC [16 MB, 32 MB, 64 MB];\n     ");
+#ifdef USE_PPMD_LIBRARY
+	printf("7,8,9=PPMD [16 MB, 32 MB, 64 MB];\n     ");
 #endif
 #ifdef USE_PAQ_LIBRARY
 	printf("10,11,12,13,14=lpaq6 [104 MB, 198 MB, 390 MB, 774 MB, 1542 MB]");
