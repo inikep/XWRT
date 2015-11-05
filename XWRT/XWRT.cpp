@@ -155,13 +155,21 @@ void start_decode(FILE* file,char* filename,bool WRT_verbose,int argc, char* arg
 
 	start_file=clock();
 	
-	if (getc(file)!=XWRT_HEADER[3] || getc(file)!=XWRT_VERSION-150)
+	if (getc(file)!=XWRT_HEADER[3])
 	{
 		printf("Bad XWRT version!\n");
 		return;
 	}
 
-	int c=getc(file);
+    int c;
+	if ((c=getc(file))!=XWRT_VERSION-150)
+	{
+        c += 150;
+		printf("Bad XWRT version, you need XWRT %d.%d!\n", c/100, (c/10)%10);
+		return;
+	}
+
+	c=getc(file);
 	int preprocFlag=0;
 	if ((c&8)!=0)
 		TURN_ON(OPTION_LZMA);
@@ -320,7 +328,7 @@ void usage()
 	printf("4,5,6=LZMA [64 KB, 1 MB, 8 MB]; ");
 #endif
 #ifdef USE_PPMD_LIBRARY
-	printf("7,8,9=PPMD [16 MB, 32 MB, 64 MB];\n     ");
+	printf("7,8,9=PPMd [16 MB, 32 MB, 64 MB];\n     ");
 #endif
 #ifdef USE_PAQ_LIBRARY
 	printf("10,11,12,13,14=lpaq6 [104 MB, 198 MB, 390 MB, 774 MB, 1542 MB]");

@@ -42,10 +42,9 @@ all: xwrt
 PPMD_FILES = PPMd/Model.o PPMd/PPMdlib.o 
 
 ZLIB_FILES = zlib/adler32.o zlib/compress.o zlib/crc32.o zlib/deflate.o zlib/gzclose.o zlib/gzlib.o zlib/gzread.o
-ZLIB_FILES += zlib/gzwrite.o zlib/infback.o zlib/inffast.o zlib/inflate.o zlib/inftrees.o zlib/trees.o
-ZLIB_FILES += zlib/uncompr.o zlib/zutil.o
+ZLIB_FILES += zlib/gzwrite.o zlib/infback.o zlib/inffast.o zlib/inflate.o zlib/inftrees.o zlib/trees.o zlib/uncompr.o zlib/zutil.o
 
-xwrt: XWRT/XWRT.o XWRT/Encoder.o XWRT/Decoder.o XWRT/MemBuffer.o XWRT/Common.o $(PPMD_FILES) $(ZLIB_FILES)
+xwrt: $(ZLIB_FILES) XWRT/XWRT.o XWRT/Encoder.o XWRT/Decoder.o XWRT/MemBuffer.o XWRT/Common.o $(PPMD_FILES)
 	$(GPP) $^ -o $@ $(LDFLAGS)
 
 .c.o:
