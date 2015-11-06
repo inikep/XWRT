@@ -247,11 +247,11 @@ void CContainers::writeMemBuffers(int preprocFlag, int PPMDlib_order, int comprL
 	if (IF_OPTION(OPTION_LZMA))
 	{
 		Byte **Data;
-		unsigned int* Size;
+		size_t* Size;
 		int count;
 		
 		count=(int)memmap.size();
-		Size=new unsigned int[count];
+		Size=new unsigned size_t[count];
 		Data=(unsigned char**) malloc(sizeof(unsigned char*)*count);
 		if (Data==NULL)
 			OUT_OF_MEMORY();

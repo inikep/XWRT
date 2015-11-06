@@ -116,7 +116,7 @@ void start_encode(FILE* file,char* filename,bool WRT_verbose,int argc, char* arg
 		float tim=float(clock()-start_file)/CLOCKS_PER_SEC;
 #ifdef USE_LZMA_LIBRARY
 		if (IF_OPTION(OPTION_LZMA))
-			printf(" + encoding finished (%d->%d bytes, %.03f bpc) in %.02fs (%.0f kb/s)\n",ftell(file),LZMAlib_GetOutputFilePos(xml_wrt.outStream),LZMAlib_GetOutputFilePos(xml_wrt.outStream)*8.0/ftell(file),tim,ftell(file)/1024/tim);
+			printf(" + encoding finished (%d->%d bytes, %.03f bpc) in %.02fs (%.0f kb/s)\n", (int)ftell(file), LZMAlib_GetOutputFilePos(xml_wrt.outStream),LZMAlib_GetOutputFilePos(xml_wrt.outStream)*8.0/ftell(file),tim,ftell(file)/1024/tim);
 		else
 #endif
 			printf(" + encoding finished (%d->%d bytes, %.03f bpc) in %.02fs (%.0f kb/s)\n", (int)ftell(file), (int)ftell(fileout), ftell(fileout)*8.0/ftell(file), tim, ftell(file)/1024.0/tim);
@@ -219,7 +219,7 @@ void start_decode(FILE* file,char* filename,bool WRT_verbose,int argc, char* arg
 
 #ifdef USE_LZMA_LIBRARY
 		if (IF_OPTION(OPTION_LZMA))
-			printf(" + decoding finished (%d->%d bytes, %.03f bpc) in %.02fs (%.0f kb/s)\n",LZMAlib_GetInputFilePos(xml_wrt.inStream),ftell(fileout),LZMAlib_GetInputFilePos(xml_wrt.inStream)*8.0/ftell(fileout),tim,ftell(fileout)/1024/tim);
+			printf(" + decoding finished (%d->%d bytes, %.03f bpc) in %.02fs (%.0f kb/s)\n",LZMAlib_GetInputFilePos(xml_wrt.inStream),(int)ftell(fileout),LZMAlib_GetInputFilePos(xml_wrt.inStream)*8.0/ftell(fileout),tim,ftell(fileout)/1024/tim);
 		else
 #endif
 			printf(" + decoding finished (%d->%d bytes, %.03f bpc) in %.02fs (%.0f kb/s)\n", (int)ftell(file), (int)ftell(fileout), ftell(file)*8.0/ftell(fileout), tim, ftell(fileout)/1024/tim);

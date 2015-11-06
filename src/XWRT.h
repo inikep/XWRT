@@ -17,7 +17,7 @@
 #define CUT_FILENAME_CHAR '.'
 
 #define USE_ZLIB_LIBRARY
-//	#define USE_LZMA_LIBRARY
+#define USE_LZMA_LIBRARY
 #define USE_PPMD_LIBRARY
 #define USE_PAQ_LIBRARY
 
@@ -47,8 +47,7 @@
 
 
 #ifdef USE_LZMA_LIBRARY
-	#include <LZMAlib.h>
-	#pragma comment (lib, "LZMAlib.lib")
+	#include "LZMA/LZMAlib.h"
 #else
 	class CInFileStream { };
 	class COutFileStream { };
