@@ -134,7 +134,6 @@ inline void XWRT_Encoder::readGetcBuffer(FILE* &file,int &c)
 	getcBufferData=&getcBuffer[1];
 	getcBufferSizeBak=getcBufferSize;
 
-	
 	if (getcBufferSize==0) 
 		c=EOF; 
 	else 
@@ -183,31 +182,12 @@ inline void XWRT_Encoder::encodeAsText(unsigned char* &s,int &s_size,EWordType w
 
 	if (!IF_OPTION(OPTION_LETTER_CONTAINER))
 	{
-#ifdef DYNAMIC_DICTIONARY
-		if (s_size>=WORD_MIN_SIZE)
-		{
-			memcpy(mem,s,s_size);
-			
-			if (mem<dictmem_end && addWord(mem,s_size)!=0)
-			{
-				mem+=(s_size/4+1)*4;
-				
-//				s[s_size]=0;
-//				printf("NEWWORD=%s %d/%d t=%d\n",s,sizeDict,dictionary,wordType);
-				
-				ENCODE_PUTC(CHAR_NEWWORD);
-				for (i=0; i<s_size; i++)
-					ENCODE_PUTC(s[i]);
-				ENCODE_PUTC(0);
-				return; 
-			}
-		}
-#endif
-
 		for (i=0; i<s_size; i++)
 		{
 			if (addSymbols[s[i]])
+			{
 				ENCODE_PUTC(CHAR_ESCAPE);
+			}
 			ENCODE_PUTC(s[i]);
 		}
 		return;
@@ -218,6 +198,7 @@ inline void XWRT_Encoder::encodeAsText(unsigned char* &s,int &s_size,EWordType w
 	{
 		ENCODE_PUTC('A');
 		cont.memout_letters->OutTgtByte(s[0]); 
+//		VERBOSE(("s=%c\n",s[0]);
 		return;
 	}
 
@@ -260,17 +241,6 @@ inline void XWRT_Encoder::encodeAsText(unsigned char* &s,int &s_size,EWordType w
 			cont.memout_words->OutTgtByte(' '); 
 			break;
 	}
-
-#ifdef DYNAMIC_DICTIONARY
-	if (s_size>=WORD_MIN_SIZE)
-	{
-		memcpy(mem,s,s_size);
-
-		if (mem<dictmem_end && addWord(mem,s_size)!=0)
-			mem+=(s_size/4+1)*4;
-	}
-#endif
-
 }
 
 inline void XWRT_Encoder::encodeCodeWord_LZMA(int &i)
@@ -439,7 +409,7 @@ inline void XWRT_Encoder::encodeCodeWord_PPM(int &i)
 			PRINT_CODEWORDS(("1st=%d ",sym2codeword[first]));
 		}
 
-		PRINT_CODEWORDS((" no=%d %s\n", no-1,dict[no]));
+		PRINT_CODEWORDS((" no=%d %s\n", first,dict[first+1]));
 }
 
 inline void XWRT_Encoder::encodeCodeWord(int &i)
@@ -619,9 +589,15 @@ void XWRT_Encoder::encodeMixed(unsigned char* s,int s_size,EXMLState& XMLState,i
 	EWordType wordType;
 	unsigned char* s2;
 
+//	s[s_size]=0;
+//	VERBOSE(("encodeMixed %s\n",s);
+
 	do
 	{
 		start=ptr;
+
+//		VERBOSE(("s_size=%d ",s_size);
+//		VERBOSE(("start=%d s[start]=%c\n",start,s[start]);
 
 		do
 		{
@@ -681,11 +657,36 @@ void XWRT_Encoder::encodeWord(unsigned char* s,int s_size,EWordType wordType,EXM
 	{
 		if (s_size>1)
 		{
-			PRINT_STACK(("push s=%s c=%c (%d) s_size=%d\n",s,c,c,s_size));
 			justAdded=true;
-			XMLState=ADDED;
 			s[s_size]=0;
-			stack.push_back((char*)s);
+
+			if (IF_OPTION(OPTION_END_TAG_OMISSION))
+			{
+				std::string str;
+				str=(char*)s+1;
+				int size=str.size();
+				toLower((unsigned char*)str.c_str(),size);
+// allowed end tag omission: "li" "dt" "dd" "p" "thead" "tfoot" "tr" "td" "th"
+// forbidden end tag; base, link, meta, hr, br, img, embed, param, area, col and input 
+				if (str=="base" || str=="link" || str=="xbasehref" || str=="br" || str=="meta"
+					|| str=="hr" || str=="img" || str=="area" || str=="input" || str=="embed" 
+					|| str=="param" || str=="col")
+				{
+					XMLState=INSIDE;
+				}
+				else
+				{
+					stack.push_back((char*)s);
+					PRINT_STACK(("push s=%s c=%c (%d) s_size=%d\n",s,c,c,s_size));
+					XMLState=ADDED;
+				}
+			}
+			else
+			{
+					stack.push_back((char*)s);
+					PRINT_STACK(("push s=%s c=%c (%d) s_size=%d\n",s,c,c,s_size));
+					XMLState=ADDED;
+			}
 		}
 		else
 			XMLState=INSIDE;
@@ -780,6 +781,7 @@ void XWRT_Encoder::encodeWord(unsigned char* s,int s_size,EWordType wordType,EXM
 				return;
 			}
 
+//			VERBOSE(("len=%d\n",len+1900);
 		} 
 
 
@@ -883,6 +885,7 @@ void XWRT_Encoder::encodeWord(unsigned char* s,int s_size,EWordType wordType,EXM
 		}
 		return;
 	}
+
 
 	if (s_size>=WORD_MIN_SIZE)
 	{
@@ -990,7 +993,7 @@ void XWRT_Encoder::encodeWord(unsigned char* s,int s_size,EWordType wordType,EXM
 				ENCODE_PUTC(' ');
 		}
 
-		encodeCodeWord(i);
+        encodeCodeWord(i);
 
 
 		if (size>0)
@@ -1006,21 +1009,24 @@ void XWRT_Encoder::encodeWord(unsigned char* s,int s_size,EWordType wordType,EXM
 	}
 	else
 	{
-				if (wordType==FIRSTUPPER)
-					s[0]=toupper(s[0]);
-				else if (wordType==UPPERWORD)
-					toUpper(s,s_size);
+        if (wordType==FIRSTUPPER)
+            s[0]=toupper(s[0]);
+        else if (wordType==UPPERWORD)
+            toUpper(s,s_size);
+
+///		PRINT_CODEWORDS(("wordType1=%d\n",wordType));
 		encodeSpaces();
+//		PRINT_CODEWORDS(("wordType2=%d\n",wordType));
 		encodeAsText(s,s_size,wordType);
 	}
 
 	if (justAdded)
 	{
-		if (IF_OPTION(OPTION_USE_CONTAINERS) && XMLState==ADDED)
+		if (IF_OPTION(OPTION_USE_CONTAINERS) && (XMLState==ADDED || XMLState==INSIDE))
 			ENCODE_PUTC(' ');
 
 		if (IF_OPTION(OPTION_USE_CONTAINERS))
-			cont.selectMemBuffer(s,s_size);
+			cont.selectMemBuffer(s,s_size,false);
 	}
 
 	return;
@@ -1090,6 +1096,8 @@ void XWRT_Encoder::WRT_encode(size_t bufferSize)
 				else
 				if (unicode_be*4/3>fftell/2)
 					TURN_ON(OPTION_UNICODE_BE)
+
+		//		VERBOSE(("unicode_le=%d unicode_be=%d %d %d uni=%d\n",unicode_le,unicode_be,unicode_be*4/3,fftell/2,IF_OPTION(OPTION_UNICODE_LE) || IF_OPTION(OPTION_UNICODE_BE));
 			}
 
 			value[c]++;
@@ -1115,7 +1123,9 @@ void XWRT_Encoder::WRT_encode(size_t bufferSize)
 				else
 				{
 					if (addSymbols[13])
+					{
 						ENCODE_PUTC(CHAR_ESCAPE);
+					}
 					ENCODE_PUTC(13);
 				}
 				continue;
@@ -1134,7 +1144,7 @@ void XWRT_Encoder::WRT_encode(size_t bufferSize)
 				PRINT_CHARS(("out CHAR_ESCAPE=%d\n",CHAR_ESCAPE));
 
 
-				ENCODE_PUTC(CHAR_ESCAPE);	
+				ENCODE_PUTC(CHAR_ESCAPE);
 				ENCODE_PUTC(c);
 				
 				ENCODE_GETC(c);
@@ -1279,6 +1289,9 @@ void XWRT_Encoder::WRT_encode(size_t bufferSize)
 											ENCODE_PUTC(sec);
 										}
 
+								//		s[s_size]=0;
+								//		VERBOSE(("OK s=%s\n",s);
+
 										ENCODE_GETC(c);
 										wordType=LOWERWORD;
 										s_size=0;
@@ -1304,6 +1317,9 @@ void XWRT_Encoder::WRT_encode(size_t bufferSize)
 								ENCODE_PUTC(hour);
 								ENCODE_PUTC(minute);
 							}
+
+//							s[s_size]=0;
+//							VERBOSE(("s=%s\n",s);
 
 							wordType=LOWERWORD;
 							s_size=0;
@@ -1404,6 +1420,7 @@ void XWRT_Encoder::WRT_encode(size_t bufferSize)
 						else
 							x1=(s[0]-'0');
 
+//						VERBOSE(("%c%c %d\n",s[s_size-2],s[s_size-1],s_size-lsize);
 						if (s_size-lsize==3)
 						{
 							c2=s[s_size-2];
@@ -1513,6 +1530,10 @@ void XWRT_Encoder::WRT_encode(size_t bufferSize)
 							ENCODE_PUTC(x3);
 							ENCODE_PUTC(x4);
 						}
+
+//						s[s_size]=0;
+//						VERBOSE(("s=%s\n",s);
+//						VERBOSE(("%d %d %d %d\n",x1,x2,x3,x4);
 
 						s_size=0;
 						wordType=LOWERWORD;
@@ -1876,6 +1897,8 @@ void XWRT_Encoder::WRT_encode(size_t bufferSize)
 									wordType=UPPERWORD;
 								else
 									wordType=LOWERWORD;
+//								s[s_size]=0;
+//								VERBOSE(("%s\n",s);
 								continue;
 							}
 							
@@ -2031,6 +2054,10 @@ void XWRT_Encoder::WRT_encode(size_t bufferSize)
 			}
 
 			wordType=VARWORD;
+
+			//	if (reservedSet[c])
+			//		continue;
+
 			continue;
 		}
 
@@ -2086,12 +2113,19 @@ void XWRT_Encoder::WRT_encode(size_t bufferSize)
 				continue;
 			}
 
-
 			if (last_c=='/' && XMLState==ADDED) // <xml="xxx"/>
 			{
 				XMLState=UNKNOWN;
 				if (stack.size()>0)
+				{
+					PRINT_STACK(("pop / str=%s\n",stack.back().c_str()));
 					stack.pop_back();
+
+					ENCODE_PUTC(c);
+					ENCODE_GETC(c);
+					cont.MemBufferPopBack();
+					continue;
+				} 
 			}  
 
 			if (c!='>')
@@ -2162,6 +2196,9 @@ void XWRT_Encoder::WRT_encode(size_t bufferSize)
 							if (c==EOF)
 								break;
 
+						//	if (letterSet[c]==UPPERCHAR) // needed only for tryShorter
+						//		wordType=VARWORD;
+
 							if (urlSet[c] || s_size>=STRING_MAX_SIZE-2) 
 								break;
 						}
@@ -2182,6 +2219,37 @@ void XWRT_Encoder::WRT_encode(size_t bufferSize)
 				continue;
 			} 
 		} 
+
+		if (IF_OPTION(OPTION_RTF_SUPPORT))
+		{
+			if ((c=='\\' /*|| c=='/'*/) && s_size==0)
+			{
+				s[s_size++]=c;
+				ENCODE_GETC(c);
+				continue;
+			}
+		}
+
+		if (IF_OPTION(OPTION_PDF_SUPPORT))
+		{
+			if (c=='(' && s_size==0)
+			{
+				s[s_size++]=c;
+				ENCODE_GETC(c);
+				continue;
+			}
+
+			if (c==')' && s_size>2)
+			{
+				s[s_size++]=c;
+	
+				encodeWord(s,s_size,wordType,XMLState,c);
+				s_size=0;
+
+				ENCODE_GETC(c);
+				continue;
+			}
+		}
 
 		if (s[0]!='<')
 		{
@@ -2206,29 +2274,15 @@ void XWRT_Encoder::WRT_encode(size_t bufferSize)
 					
 					s[s_size++]=c;
 				}
-						
+				
+				//	s[s_size]=0;
+				//	VERBOSE(("s=%s\n",s);
+				
+				
 				encodeWord(s,s_size,wordType,XMLState,c);
 				s_size=0;
 				continue;
 			}
-
-#ifdef DYNAMIC_DICTIONARY	
-			if (c=='\'' && s_size>=1) // it's
-			{
-				s[s_size++]=c;
-				if (s_size>=STRING_MAX_SIZE-2)
-				{
-					encodeWord(s,s_size,wordType,XMLState,c);
-					s_size=0;
-				}
-				ENCODE_GETC(c);
-				
-				if (s_size==2 && wordType==FIRSTUPPER && letterSet[c]==UPPERCHAR)
-					wordType=UPPERWORD;
-				
-				continue;
-			}
-#endif
 		}
 
 		if (wordSet[c])
@@ -2254,7 +2308,6 @@ void XWRT_Encoder::WRT_encode(size_t bufferSize)
 				{
 					switch (wordType)
 					{
-                        default:
 						case LOWERWORD:
 							if (letterType!=LOWERCHAR)
 								wordType=VARWORD;
@@ -2330,7 +2383,7 @@ void XWRT_Encoder::WRT_encode(size_t bufferSize)
 		PRINT_DICT(("unicode_le=%d unicode_be=%d uni=%d\n",unicode_le,unicode_be,IF_OPTION(OPTION_UNICODE_LE) || IF_OPTION(OPTION_UNICODE_BE)));
 	}
 
-	printf(" + dynamic dictionary %d/%d words\n",sizeDict,dictionary);
+	VERBOSE((" + dynamic dictionary %d/%d words\n",sizeDict,dictionary));
 }
 
 inline int common(const char* offset1,const char* offset2, int bound)
@@ -2408,7 +2461,7 @@ void XWRT_Encoder::write_dict(int comprLevel)
 		PAQ_encoder->compress(count);
 
 		int last=ftell(XWRT_fileout);
-		for (i=0; i<count;)
+		for (i=0; i<count; )
 		{
 			PAQ_encoder->compress(writeBuffer[3+i]);
 			i++;
@@ -2448,7 +2501,6 @@ void XWRT_Encoder::write_dict(int comprLevel)
 		PUTC(count>>16);
 		PUTC(count>>8);
 		PUTC(count);
-
 		fwrite_fast((unsigned char*)writeBuffer+3,count,XWRT_fileout);
 
 		printStatus(0,count,true);
@@ -2456,9 +2508,9 @@ void XWRT_Encoder::write_dict(int comprLevel)
 }
 
 
-void XWRT_Encoder::WRT_get_options(int& c,int& c2)
+void XWRT_Encoder::WRT_get_options(int& c,int& c2,int& c3)
 {
-	c=c2=0;
+	c=c2=c3=0;
 	if (IF_OPTION(OPTION_USE_CONTAINERS))
 		c=c+128;
 	if (IF_OPTION(OPTION_PAQ))
@@ -2469,10 +2521,8 @@ void XWRT_Encoder::WRT_get_options(int& c,int& c2)
 		c=c+16;
 	if (IF_OPTION(OPTION_LZMA))
 		c=c+8;
-	if (IF_OPTION(OPTION_BINARY_DATA))
-		c=c+4;
 
-	c+=preprocType; // 0-3
+	c+=preprocType; // 0-4
 
 	if (IF_OPTION(OPTION_LETTER_CONTAINER))
 		c2=c2+128;
@@ -2490,15 +2540,22 @@ void XWRT_Encoder::WRT_get_options(int& c,int& c2)
 		c2=c2+2;
 	if (IF_OPTION(OPTION_UNICODE_BE))
 		c2=c2+1;
+
+	if (IF_OPTION(OPTION_BINARY_DATA))
+		c3=c3+32;
+	if (IF_OPTION(OPTION_ADD_SYMBOLS_MISC))
+		c3=c3+16;
+	if (IF_OPTION(OPTION_END_TAG_OMISSION))
+		c3=c3+2;
+	if (IF_OPTION(OPTION_SPACELESS_WORDS))
+		c3=c3+1;
 }
 
 
 void XWRT_Encoder::WRT_start_encoding(unsigned int fileLen,bool type_detected)
 {
-	int c,c2,dictPathLen;
-	unsigned char s[STRING_MAX_SIZE];
-	unsigned char dictPath[STRING_MAX_SIZE];
-	s[0]=0;
+	int c,c2,c3;
+    std::string dict_path;
 	lastAll=0;
 	getcBufferDataParts=0;
 	collision=0;
@@ -2516,45 +2573,41 @@ void XWRT_Encoder::WRT_start_encoding(unsigned int fileLen,bool type_detected)
 	g_fileLenMB=fileLenMB;
 	init_PPMD(fileLenMB,COMPRESS);
 
+//	int pos=ftell();
+//	fprintf(fileout, "%c%c%c%c", 0,0,0,0);
+
 	cont.prepareMemBuffers();
 	cont.memout->memsize=0;
 
 
-	
-	if (preprocType!=LZ77 && fileLenMB<32)
-		minWordFreq+=3;
+	clock_t start_time;  // in ticks
+    start_time=clock();
 
-	if ((preprocType==PPM || preprocType==PAQ) && fileLenMB<6)
-		minWordFreq=250;
 
+//	if (preprocType!=LZ77 && fileLenMB<32)
+//		minWordFreq+=3;
+
+//	if ((preprocType==PPM || preprocType==PAQ) && fileLenMB<6)
+//		minWordFreq=250;
+        
 	int pos=ftell(XWRT_file);
-	if (!type_detected)
-		WRT_detectFileType();
-#ifdef DYNAMIC_DICTIONARY
-	getcBufferSize=getcBufferSizeBak;
-#else
+
+    if (!type_detected)
+        WRT_detectFileType();
+
 	getcBufferSize=0;
-	fseek(XWRT_file, pos, SEEK_SET );
-#endif
+	fseek(XWRT_file, pos, SEEK_SET);
+//	VERBOSE(("fseek=%d %p %d %d\n",pos,getcBufferData,getcBufferSize,getcBufferDataParts);
+
+//	VERBOSE((" + dynamic dictionary created in %1.2fs (%d words, min freq>=%d)\n",double(clock()-start_time)/CLOCKS_PER_SEC,sortedDict.size(),minWordFreq);
 
 
-	dictPathLen=getSourcePath((char*)dictPath,sizeof(dictPath));
-
-	if (dictPathLen>0)
-	{
-		dictPath[dictPathLen]=0;
-		strcat((char*)dictPath,(char*)s);
-		strcat((char*)dictPath,(char*)"wrt-eng.dic");
-		strcpy((char*)s,(char*)dictPath);
-	}
-
-
-
-	WRT_get_options(c,c2); // po make_dict()
-	WRT_print_options();
+	WRT_get_options(c,c2,c3); // po make_dict()
+	PRINT_OPTIONS(("WRT_start_encoding:")); WRT_print_options();
 
 	PUTC(c);
 	PUTC(c2);
+	PUTC(c3);
 	PUTC(maxMemSize/(1024*1024));
 	PUTC(fileLenMB/256);
 	PUTC(fileLenMB%256);
@@ -2562,12 +2615,15 @@ void XWRT_Encoder::WRT_start_encoding(unsigned int fileLen,bool type_detected)
 
 	if (IF_OPTION(OPTION_BINARY_DATA))
 	{
+		start_time=clock();
+
 		getcBuffer[0]=0;
 		getcBufferData=&getcBuffer[1];
 
 		while (true)
 		{
 			READ_CHAR(c);
+//			ENCODE_GETC(c);
 			if (c<0)
 				break;
 			ENCODE_PUTC(c);
@@ -2589,15 +2645,13 @@ void XWRT_Encoder::WRT_start_encoding(unsigned int fileLen,bool type_detected)
 
 	PRINT_DICT(("maxMemSize=%d fileLenMB=%d preprocType=%d\n",maxMemSize,fileLenMB,preprocType));
 
-	write_dict(additionalParam); // przed initialize()
+	write_dict(additionalParam); // przed init_dict()
 
-	memset(detectedSymbols,0,sizeof(detectedSymbols));
-	decoding=false;
-
-	WRT_deinitialize();
-
-	if (!initialize(s,true))
-		return;
+    memset(detectedSymbols,0,sizeof(detectedSymbols));
+    decoding=false;
+    dict_path=getSourcePath() + "wrt-eng.dic";
+    if (!init_dict((unsigned char*)dict_path.c_str()))
+        return;
 
 	memset(value,0,sizeof(value));
 
@@ -2606,6 +2660,7 @@ void XWRT_Encoder::WRT_start_encoding(unsigned int fileLen,bool type_detected)
 		PUTC(1*detectedSymbols[0]+2*detectedSymbols[1]+4*detectedSymbols[2]+8*detectedSymbols[3]+16*detectedSymbols[4]+32*detectedSymbols[5]+64*detectedSymbols[6]+128*detectedSymbols[7]);
 		PUTC(1*detectedSymbols[8]+2*detectedSymbols[9]+4*detectedSymbols[10]+8*detectedSymbols[11]+16*detectedSymbols[12]+32*detectedSymbols[13]+64*detectedSymbols[14]+128*detectedSymbols[15]);
 		PUTC(1*detectedSymbols[16]+2*detectedSymbols[17]+4*detectedSymbols[18]+8*detectedSymbols[19]+16*detectedSymbols[20]+32*detectedSymbols[21]+64*detectedSymbols[22]+128*detectedSymbols[23]);
+		PUTC(1*detectedSymbols[24]+2*detectedSymbols[25]+4*detectedSymbols[26]+8*detectedSymbols[27]+16*detectedSymbols[28]+32*detectedSymbols[29]+64*detectedSymbols[30]+128*detectedSymbols[31]);
 	}
 	else
 	{
@@ -2613,8 +2668,11 @@ void XWRT_Encoder::WRT_start_encoding(unsigned int fileLen,bool type_detected)
 		PAQ_encoder->compress(1*detectedSymbols[0]+2*detectedSymbols[1]+4*detectedSymbols[2]+8*detectedSymbols[3]+16*detectedSymbols[4]+32*detectedSymbols[5]+64*detectedSymbols[6]+128*detectedSymbols[7]);
 		PAQ_encoder->compress(1*detectedSymbols[8]+2*detectedSymbols[9]+4*detectedSymbols[10]+8*detectedSymbols[11]+16*detectedSymbols[12]+32*detectedSymbols[13]+64*detectedSymbols[14]+128*detectedSymbols[15]);
 		PAQ_encoder->compress(1*detectedSymbols[16]+2*detectedSymbols[17]+4*detectedSymbols[18]+8*detectedSymbols[19]+16*detectedSymbols[20]+32*detectedSymbols[21]+64*detectedSymbols[22]+128*detectedSymbols[23]);
+		PAQ_encoder->compress(1*detectedSymbols[24]+2*detectedSymbols[25]+4*detectedSymbols[26]+8*detectedSymbols[27]+16*detectedSymbols[28]+32*detectedSymbols[29]+64*detectedSymbols[30]+128*detectedSymbols[31]);
 #endif
 	}
+
+	start_time=clock();
 
 	WRT_encode(getcBufferSize);
 
@@ -2630,6 +2688,10 @@ void XWRT_Encoder::WRT_start_encoding(unsigned int fileLen,bool type_detected)
 		PAQ_encoder=NULL;
 	}
 #endif
+//	fileLen=ftell(); // output file length
+//	fseek(fileout, pos, SEEK_SET );
+//	fprintf(fileout, "%c%c%c%c", fileLen>>24, fileLen>>16, fileLen>>8, fileLen);
+//	fseek(fileout, fileLen, SEEK_SET ); 
 }
 
 inline void XWRT_Encoder::setSpaces(int c)
@@ -2651,9 +2713,16 @@ inline void XWRT_Encoder::checkWord(unsigned char* &s,int &s_size,EXMLState& XML
 		return;
 	}
 
-	if (s_size>WORD_MAX_SIZE)
-		s_size=WORD_MAX_SIZE; 
-
+	if (s_size+spaces>WORD_MAX_SIZE)
+	{
+		if (spaces>=WORD_MAX_SIZE)
+		{
+			s_size=0;
+			spaces=WORD_MAX_SIZE;
+		}
+		else
+			s_size=WORD_MAX_SIZE-spaces; 
+	}
 
 	if (XMLState==CLOSE || XMLState==CLOSE_EOL)
 	{
@@ -2707,7 +2776,7 @@ inline void XWRT_Encoder::checkWord(unsigned char* &s,int &s_size,EXMLState& XML
 		{
 			if (firstWarn)
 			{
-				printf("warning: dictionary too big, you can use -b option to increase buffer size\n");
+				VERBOSE(("warning: dictionary too big, you can use -b option to increase buffer size\n"));
 				firstWarn=false;
 			}
 			return;
@@ -2762,10 +2831,7 @@ int XWRT_Encoder::WRT_detectFileType()
 		if (fileLenMB>0)
 			getcBufferDataParts=1+((1024*1024/(mFileBufferSize))*(fileLenMB+1))/firstPassBlock;
 
-	PRINT_DICT(("firstPassBlock=%d fileLenMB=%d getcBufferDataParts=%d\n",firstPassBlock,fileLenMB,getcBufferDataParts));
-#ifdef DYNAMIC_DICTIONARY
-		getcBufferDataParts=2;
-#endif
+        PRINT_DICT(("firstPassBlock=%d fileLenMB=%d getcBufferDataParts=%d\n",firstPassBlock,fileLenMB,getcBufferDataParts));
 		WRT_encode(0);
 
 		PRINT_DICT(("bincount=%d/%d\n",binCount,ftell(XWRT_file)/100));
@@ -2776,8 +2842,7 @@ int XWRT_Encoder::WRT_detectFileType()
 			TURN_ON(OPTION_CRLF);
 
 	    PRINT_DICT(("+ WRT_detectFileType time %1.2f sec\n",double(clock()-start_time)/CLOCKS_PER_SEC));
-        start_time = start_time; // ignore warnings
-        
+
 		WRT_detectFinish();
 	}
 
@@ -2791,7 +2856,10 @@ int XWRT_Encoder::WRT_detectFileType()
 	detect=false;
 	getcBufferDataParts=0;
 
+    PRINT_OPTIONS(("WRT_detectFileType:"));
 	WRT_print_options();
+
+//	VERBOSE(("sortedDictSize=%d\n",sortedDict.size());
 
 	return preprocFlag;
 }
@@ -2826,6 +2894,9 @@ int compare_freq( const void *arg1, const void *arg2 )
 	int a=*(int*)arg1;
 	int b=*(int*)arg2;
 
+//	VERBOSE(("%p %p\n",a,b);
+//	VERBOSE(("%s %s\n",a,b);
+
 	return dictfreq[b]-dictfreq[a];
 }
 
@@ -2852,9 +2923,13 @@ void XWRT_Encoder::sortDict(int size)
 			add++;
 	}
 
+//	VERBOSE(("cdw add=%d %d %d %d %d\n",add,dict1size,bound3,bound4,size);
+
 	dict1size-=add;
 	bound3-=add;
 	bound4-=add;
+
+//	VERBOSE(("cdw1 add=%d %d %d %d %d\n",add,dict1size,bound3,bound4,size);
 
 	int* inttable=new int[size];
 
@@ -2864,9 +2939,13 @@ void XWRT_Encoder::sortDict(int size)
 	for (i=0; i<size; i++)
 		inttable[i]=i+1;
 
+//	for (i=0; i<size; i++)
+//		VERBOSE(("1(%d) %s=%d\n",inttable[i],dict[inttable[i]],dictfreq[inttable[i]]);
 
 	qsort(&inttable[0],size,sizeof(inttable[0]),compare_freq);
 
+//	for (i=0; i<size; i++)
+//		VERBOSE(("2(%d) %s=%d\n",inttable[i],dict[inttable[i]],dictfreq[inttable[i]]);
 
 	if (preprocType!=LZ77)
 	{
@@ -2880,6 +2959,9 @@ void XWRT_Encoder::sortDict(int size)
 		
 		if (size>bound4)
 			qsort(&inttable[bound4],size-bound4,sizeof(inttable[0]),compare_str);
+
+//	for (i=0; i<size; i++)
+//		VERBOSE(("3(%d) %s=%d\n",inttable[i],dict[inttable[i]],dictfreq[inttable[i]]);
 	}
 
 	for (i=0; i<size; i++)
@@ -2889,6 +2971,26 @@ void XWRT_Encoder::sortDict(int size)
 	}
 
 	delete(inttable);
+
+/*	qsort(&dict[1],dict1size-1,sizeof(dict[0]),compare_str);
+
+	VERBOSE(("2 %d %d %d %d\n",dict1size,bound3,bound4,size);
+
+	qsort(&dict[dict1size],min(size,bound3)-dict1size,sizeof(dict[0]),compare_str);
+
+	VERBOSE(("3 %d %d %d %d\n",dict1size,bound3,bound4,size);
+
+	if (size>bound3)
+		qsort(&dict[bound3],min(size,bound4)-bound3,sizeof(dict[0]),compare_str);
+
+	VERBOSE(("4 %d %d %d %d\n",dict1size,bound3,bound4,size);
+
+	if (size>bound4)
+		qsort(&dict[bound4],size-bound4,sizeof(dict[0]),compare_str);*/
+
+
+//	for (i=0; i<size; i++)
+//		VERBOSE(("%d=%s\n",i,dict[i]);
 }
 
 
@@ -2919,6 +3021,8 @@ void XWRT_Encoder::WRT_detectFinish()
 	{
 		num=dictfreq[i];
 
+	//	VERBOSE(("%d %s=%d\n",i,dict[i],num);
+
 		if (num>=minWordFreq || (num>=minWordFreq2 && (dictlen[i]>=7))) 
 			;
 		else
@@ -2935,6 +3039,8 @@ void XWRT_Encoder::WRT_detectFinish()
 		if (i>j)
 			break;
 
+//		VERBOSE(("%d->%d\n",i,j);
+
 		dict[i]=dict[j];
 		dictfreq[i]=dictfreq[j];
 		dictfreq[j--]=0;
@@ -2946,6 +3052,11 @@ void XWRT_Encoder::WRT_detectFinish()
 		sizeDict=maxDictSize;
 
 	PRINT_DICT(("reduced to %d words (freq>=%d)\n",sizeDict,minWordFreq));
+
+/*	for (i=1; i<sizeDict; i++)
+	{
+		VERBOSE(("%d %s=%d\n",i,dict[i],dictfreq[i]);
+	}*/
 
 	if (quotes>=minSpacesFreq())
 		TURN_ON(OPTION_QUOTES_MODELING);

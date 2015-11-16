@@ -39,7 +39,7 @@ bool tryOpen(const char* FName, bool& YesToAll)
 		return true;
 	}
 
-    printf("%s already exists, overwrite?: <Y>es, <N>o, <A>ll, <Q>uit?",FName);
+    VERBOSE(("%s already exists, overwrite?: <Y>es, <N>o, <A>ll, <Q>uit?",FName));
     for ( ; ; )
         switch ( toupper(getch()) ) {
             case 'A':
@@ -50,40 +50,36 @@ bool tryOpen(const char* FName, bool& YesToAll)
 				return true;
             case 0x1B: 
 			case 'Q':
-				printf("quit\n"); exit(-1);
+				VERBOSE(("quit\n")); exit(-1);
             case 'N':                       
 				return false;
         }
 }
 
-void start_encode(FILE* file,char* filename,bool WRT_verbose,int argc, char* argv[])
+
+void start_encode(XWRT_Encoder &xml_wrt,FILE* file,char* filename)
 {
 	FILE* fileout;
 	char fileoutbuf[32*1024];
 	clock_t start_file;  // in ticks
+	std::string outputFilename;
 
 	bytesRead=bytesWritten=0;
 
-	XWRT_Encoder xml_wrt;
-	xml_wrt.YesToAll=YesToAll;
-	xml_wrt.WRT_verbose=WRT_verbose;
-	xml_wrt.defaultSettings(argc,argv);
-	
 	start_file=clock();
-	
-	std::string outputFilename=filename;
-	outputFilename+=ADD_FILENAME_EXT;
-	
+
+    format(outputFilename, "%s" ADD_FILENAME_EXT "%d", filename, xml_wrt.compLevel);
+
 	if (!tryOpen(outputFilename.c_str(),xml_wrt.YesToAll))
 		return;
 	
 #ifdef USE_LZMA_LIBRARY
-	int preprocFlag=xml_wrt.preprocFlag;
+    int preprocFlag=xml_wrt.preprocFlag;
 	if (IF_OPTION(OPTION_LZMA))
 	{
 		if (!LZMAlib_PrepareOutputFile((char*)outputFilename.c_str(),xml_wrt.outStream))
 		{
-			printf("Can't open file %s\n",outputFilename.c_str());
+			VERBOSE(("Can't open file %s\n",outputFilename.c_str()));
 			return;
 		}
 		fileout=(FILE*)1;
@@ -94,7 +90,7 @@ void start_encode(FILE* file,char* filename,bool WRT_verbose,int argc, char* arg
 		fileout=fopen(outputFilename.c_str(),"wb");
 		if (fileout==NULL)
 		{
-			printf("Can't open file %s\n",outputFilename.c_str());
+			VERBOSE(("Can't open file %s\n",outputFilename.c_str()));
 			fclose(file);
 			return;
 		}
@@ -103,24 +99,21 @@ void start_encode(FILE* file,char* filename,bool WRT_verbose,int argc, char* arg
 			
 	std::string compName;
 	xml_wrt.getAlgName(compName);
-	printf("- encoding %s to %s (%s)\n",filename,outputFilename.c_str(),compName.c_str());
+	VERBOSE(("- encoding %s to %s (%s)\n",filename,outputFilename.c_str(),compName.c_str()));
 					
 	int flen=xml_wrt.flen(file);
 	XWRT_file=file;
 	XWRT_fileout=fileout;
 	fseek(XWRT_file, 0, SEEK_SET );
 	xml_wrt.WRT_start_encoding(flen,false);
-				
-	if (WRT_verbose)
-	{
-		float tim=float(clock()-start_file)/CLOCKS_PER_SEC;
+
+    float tim=float(clock()-start_file)/CLOCKS_PER_SEC;
 #ifdef USE_LZMA_LIBRARY
-		if (IF_OPTION(OPTION_LZMA))
-			printf(" + encoding finished (%d->%d bytes, %.03f bpc) in %.02fs (%.0f kb/s)\n", (int)ftell(file), LZMAlib_GetOutputFilePos(xml_wrt.outStream),LZMAlib_GetOutputFilePos(xml_wrt.outStream)*8.0/ftell(file),tim,ftell(file)/1024/tim);
-		else
+    if (IF_OPTION(OPTION_LZMA))
+        VERBOSE((" + encoding finished (%d->%d bytes, %.03f bpc) in %.02fs (%.0f kb/s)\n",ftell(file),LZMAlib_GetOutputFilePos(xml_wrt.outStream),LZMAlib_GetOutputFilePos(xml_wrt.outStream)*8.0/ftell(file),tim,ftell(file)/1024/tim));
+    else
 #endif
-			printf(" + encoding finished (%d->%d bytes, %.03f bpc) in %.02fs (%.0f kb/s)\n", (int)ftell(file), (int)ftell(fileout), ftell(fileout)*8.0/ftell(file), tim, ftell(file)/1024.0/tim);
-	}
+        VERBOSE((" + encoding finished (%d->%d bytes, %.03f bpc) in %.02fs (%.0f kb/s)\n",ftell(file),ftell(fileout),ftell(fileout)*8.0/ftell(file),tim,ftell(file)/1024/tim));
 				
 	fclose(file);
 
@@ -140,7 +133,7 @@ void start_encode(FILE* file,char* filename,bool WRT_verbose,int argc, char* arg
 		YesToAll=xml_wrt.YesToAll;
 }
 
-void start_decode(FILE* file,char* filename,bool WRT_verbose,int argc, char* argv[])
+void start_decode(XWRT_Decoder& xml_wrt,FILE* file,char* filename)
 {
 	FILE* fileout;
 	char fileoutbuf[32*1024];
@@ -148,13 +141,9 @@ void start_decode(FILE* file,char* filename,bool WRT_verbose,int argc, char* arg
 
 	bytesRead=bytesWritten=0;
 
-	XWRT_Decoder xml_wrt;
-	xml_wrt.YesToAll=YesToAll;
-	xml_wrt.WRT_verbose=WRT_verbose;
-	xml_wrt.defaultSettings(argc,argv);
 
 	start_file=clock();
-	
+
 	if (getc(file)!=XWRT_HEADER[3])
 	{
 		printf("Bad XWRT version!\n");
@@ -169,7 +158,7 @@ void start_decode(FILE* file,char* filename,bool WRT_verbose,int argc, char* arg
 		return;
 	}
 
-	c=getc(file);
+	c=getc(file); // 6th header byte
 	int preprocFlag=0;
 	if ((c&8)!=0)
 		TURN_ON(OPTION_LZMA);
@@ -177,9 +166,12 @@ void start_decode(FILE* file,char* filename,bool WRT_verbose,int argc, char* arg
 	std::string outputFilename=filename;
 	size_t pos=outputFilename.rfind(CUT_FILENAME_CHAR);
 	if (pos!=std::string::npos && pos>0)
+	{
 		outputFilename.resize(pos);
+		outputFilename+=AFTER_DECOMPRESED_NAME;
+	}
 	else
-		outputFilename+=".xml";
+		outputFilename+="_decomp";
 	
 	if (!tryOpen(outputFilename.c_str(),xml_wrt.YesToAll))
 		return;
@@ -187,7 +179,7 @@ void start_decode(FILE* file,char* filename,bool WRT_verbose,int argc, char* arg
 	fileout=fopen(outputFilename.c_str(),"wb");
 	if (fileout==NULL)
 	{
-		printf("Can't open file %s\n",outputFilename.c_str());
+		VERBOSE(("Can't open file %s\n",outputFilename.c_str()));
 		fclose(file);
 		return;
 	}
@@ -200,7 +192,7 @@ void start_decode(FILE* file,char* filename,bool WRT_verbose,int argc, char* arg
 		fclose(file);
 		if (!LZMAlib_PrepareInputFile(filename,xml_wrt.inStream))
 		{
-			printf("Can't open file %s\n",outputFilename.c_str());
+			VERBOSE(("Can't open file %s\n",outputFilename.c_str()));
 			return;
 		}	
 
@@ -213,17 +205,14 @@ void start_decode(FILE* file,char* filename,bool WRT_verbose,int argc, char* arg
 	XWRT_fileout=fileout;
 	xml_wrt.WRT_start_decoding(c,filename,(char*)outputFilename.c_str());
 	
-	if (WRT_verbose)
-	{
-		float tim=float(clock()-start_file)/CLOCKS_PER_SEC;
+    float tim=float(clock()-start_file)/CLOCKS_PER_SEC;
 
 #ifdef USE_LZMA_LIBRARY
-		if (IF_OPTION(OPTION_LZMA))
-			printf(" + decoding finished (%d->%d bytes, %.03f bpc) in %.02fs (%.0f kb/s)\n",LZMAlib_GetInputFilePos(xml_wrt.inStream),(int)ftell(fileout),LZMAlib_GetInputFilePos(xml_wrt.inStream)*8.0/ftell(fileout),tim,ftell(fileout)/1024/tim);
-		else
+    if (IF_OPTION(OPTION_LZMA))
+        VERBOSE((" + decoding finished (%d->%d bytes, %.03f bpc) in %.02fs (%.0f kb/s)\n",LZMAlib_GetInputFilePos(xml_wrt.inStream),ftell(fileout),LZMAlib_GetInputFilePos(xml_wrt.inStream)*8.0/ftell(fileout),tim,ftell(fileout)/1024/tim));
+    else
 #endif
-			printf(" + decoding finished (%d->%d bytes, %.03f bpc) in %.02fs (%.0f kb/s)\n", (int)ftell(file), (int)ftell(fileout), ftell(file)*8.0/ftell(fileout), tim, ftell(fileout)/1024/tim);
-	}
+        VERBOSE((" + decoding finished (%d->%d bytes, %.03f bpc) in %.02fs (%.0f kb/s)\n",ftell(file),ftell(fileout),ftell(file)*8.0/ftell(fileout),tim,ftell(fileout)/1024/tim));
 
 	fclose(fileout);
 
@@ -244,8 +233,10 @@ void start_decode(FILE* file,char* filename,bool WRT_verbose,int argc, char* arg
 }
 
 
+bool first_decode=true;
+bool first_encode=true;
 
-void processFile(char* filename,bool WRT_verbose,int argc, char* argv[])
+void processFile(char* filename,int argc, char* argv[],XWRT_Encoder &xml_wrt, XWRT_Decoder &xml_wrtd)
 {
 	FILE* file;
 	char filebuf[32*1024];
@@ -253,7 +244,7 @@ void processFile(char* filename,bool WRT_verbose,int argc, char* argv[])
 	file=fopen((const char*)filename,"rb");
 	if (file==NULL)
 	{
-		printf("Can't open file %s\n",filename);
+		VERBOSE(("Can't open file %s\n",filename));
 		return;
 	}
 	
@@ -262,9 +253,36 @@ void processFile(char* filename,bool WRT_verbose,int argc, char* argv[])
 	
 	if (getc(file)==XWRT_HEADER[0] && getc(file)==XWRT_HEADER[1] && 
 		getc(file)==XWRT_HEADER[2])
-		start_decode(file,filename,WRT_verbose,argc,argv);
+	{
+        xml_wrtd.YesToAll=YesToAll;
+        xml_wrtd.defaultSettings(argc,argv);
+
+/*        if (first_decode)
+        {
+            first_decode=false;
+            xml_wrt.decoding=true;
+            if (!xml_wrtd.init_dict((unsigned char*)(xml_wrt.getSourcePath() + "wrt-eng.dic").c_str()))
+                return;
+        }*/
+
+        start_decode(xml_wrtd,file,filename);
+	}
 	else
-		start_encode(file,filename,WRT_verbose,argc,argv);
+	{
+        xml_wrt.YesToAll=YesToAll;
+        xml_wrt.defaultSettings(argc,argv);
+
+/*        if (first_encode)
+        {
+            first_encode=false;
+            memset(xml_wrt->detectedSymbols,0,sizeof(xml_wrt->detectedSymbols));
+            xml_wrt->decoding=false;
+            if (!xml_wrt->init_dict((unsigned char*)(xml_wrt.getSourcePath() + "wrt-eng.dic").c_str()))
+                return;
+        }*/
+
+        start_encode(xml_wrt,file,filename);
+	}
 }
 
 #ifdef WINDOWS
@@ -274,16 +292,34 @@ std::vector<std::string> list;
 bool createFileList(char* pattern)
 {
 	std::string str;
-	std::string patt;
+	std::string path;
     WIN32_FIND_DATA c_file;
     HANDLE hFile=FindFirstFile( pattern, &c_file );
-	patt=pattern;
+
+	path=pattern;
+	if (path.find_last_of('\\')==std::string::npos &&
+		path.find_last_of('/')==std::string::npos)
+		path.erase();
+	if ((int)path.find_last_of('\\')>(int)path.find_last_of('/'))
+	{
+		if (path.find_last_of('\\')!=std::string::npos)
+			path.resize(path.find_last_of('\\'));
+	}
+	else
+	{
+		if (path.find_last_of('/')!=std::string::npos)
+			path.resize(path.find_last_of('/'));
+	}
 
 	if (hFile != INVALID_HANDLE_VALUE) 
 	do
 	{
-		str=c_file.cFileName;
+		if (path.size()>0)
+			str=path+'\\'+c_file.cFileName;
+		else
+			str=c_file.cFileName;
 
+//		if (patt[patt.size()-1]=='*' || tolower(str[str.size()-1])==tolower(patt[patt.size()-1]))
 		if (!(c_file.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY))
 			list.push_back(str);
 	}
@@ -295,6 +331,7 @@ bool createFileList(char* pattern)
 }
 
 #endif
+
 
 int getOptionsCount(int argc, char* argv[])
 {
@@ -312,53 +349,56 @@ int getOptionsCount(int argc, char* argv[])
 
 void usage()
 {
-	printf("Usage: XWRT.exe [options] <file1> [file2] [file3] ...\n");
-	printf(" where <file> is a XML file or a XWRT compressed file (it's auto-detected)\n");
-	printf(" 	     you can also use wildcards (e.g., \"*.xml\")\n");
-	printf(" GENERAL OPTIONS (which also set default additional options):\n");
-	printf("  -i = Delete input files\n");
-	printf("  -lX = Set compression level (0=store");
+	VERBOSE(("Usage: " XWRT_SHORT ".exe [options] <file1> [file2] [file3] ...\n"));
+	VERBOSE((" where <file> is a XML file or a " XWRT_SHORT " compressed file (it's auto-detected)\n"));
+	VERBOSE((" 	     you can also use wildcards (e.g., \"*.xml\")\n"));
+	VERBOSE((" GENERAL OPTIONS (which also set default additional options):\n"));
+	VERBOSE(("  -i = Delete input files\n"));
+	VERBOSE(("  -lX = Set compression level (0=store"));
 #ifdef USE_ZLIB_LIBRARY
-	printf("; 1,2,3=zlib [fast,normal(default),best]");
+	VERBOSE(("; 1,2,3=zlib [fast,normal(default),best]"));
 #endif
 #if defined(USE_LZMA_LIBRARY) || defined(USE_PPMD_LIBRARY) || defined(USE_PAQ_LIBRARY)
-	printf(";\n     ");
+	VERBOSE((";\n     "));
 #endif
 #ifdef USE_LZMA_LIBRARY
-	printf("4,5,6=LZMA [64 KB, 1 MB, 8 MB]; ");
+	VERBOSE(("4,5,6=LZMA [64 KB, 1 MB, 8 MB]; "));
 #endif
 #ifdef USE_PPMD_LIBRARY
-	printf("7,8,9=PPMd [16 MB, 32 MB, 64 MB];\n     ");
+	VERBOSE(("7,8,9=PPMd [16 MB, 32 MB, 64 MB];\n     "));
 #endif
 #ifdef USE_PAQ_LIBRARY
-	printf("10,11,12,13,14=lpaq6 [104 MB, 198 MB, 390 MB, 774 MB, 1542 MB]");
+	VERBOSE(("10,11,12,13,14=lpaq6 [104 MB, 198 MB, 390 MB, 774 MB, 1542 MB]"));
 #endif
-	printf(")\n");
-	printf("  -o = Force overwrite of output files\n");
-	printf("  -0, -1, -2, -3 = -l0 (store) optimized for further LZ77, LZMA, PPM, PAQ (-3)\n");
-	printf(" ADDITIONAL OPTIONS:\n");
-	printf("  -bX = Set maximum buffer size while creating dynamic dictionary to X MB\n");
-	printf("  -c = Turn off containers (without number and word containers)\n");
-	printf("  +d = Turn on usage of the static dictionary (requires wrt-eng.dic,\n");
-	printf("       which is available at http://pskibinski.pl/research)\n");
-	printf("  -eX = Set maximum dictionary size to X words\n");
-	printf("  -fX = Set minimal word frequency to X\n");
-	printf("  -mX = Set maximum memory buffer size to X MB (default=8)\n");
-	printf("  -n = Turn off number containers\n");
-	printf("  -pX = Preprocess only (file_size/X) bytes in a first pass\n");
-	printf("  -s = Turn off spaces modeling option\n");
-	printf("  -t = Turn off \"try shorter word\" option\n");
-	printf("  -w = Turn off word containers\n");
+	VERBOSE((")\n"));
+	VERBOSE(("  -o = Force overwrite of output files\n"));
+	VERBOSE(("  -0, -1, -2, -3 = -l0 (store) optimized for further LZ77, LZMA, PPM, PAQ (-3)\n"));
+
+	VERBOSE((" ADDITIONAL OPTIONS:\n"));
+	VERBOSE(("  -a  = Turn off spaceless word model\n"));
+	VERBOSE(("  -bX = Set maximum buffer size while creating dynamic dictionary to X MB\n"));
+	VERBOSE(("  -c = Turn off containers (without number and word containers)\n"));
+	VERBOSE(("  +d = Turn on usage of the static dictionary (requires wrt-eng.dic,\n"));
+	VERBOSE(("       which is available at http://pskibinski.pl/research)\n"));
+	VERBOSE(("  -eX = Set maximum dictionary size to X words\n"));
+	VERBOSE(("  -fX = Set minimal word frequency to X\n"));
+	VERBOSE(("  +h = Turn on HTML optimization\n"));
+	VERBOSE(("  -mX = Set maximum memory buffer size to X MB (default=8)\n"));
+	VERBOSE(("  -n = Turn off number containers\n"));
+	VERBOSE(("  -pX = Preprocess only (file_size/X) bytes in a first pass\n"));
+	VERBOSE(("  +p = Turn on PDF optimization\n"));
+	VERBOSE(("  +r = Turn on RTF/TeX optimization\n"));
+	VERBOSE(("  -s = Turn off spaces modeling option\n"));
+	VERBOSE(("  -t = Turn off \"try shorter word\" option\n"));
+	VERBOSE(("  -w = Turn off word containers\n"));
 }
 
 
 int main(int argc, char* argv[])
 {
 	int optCount;
-	bool WRT_verbose=true;
 
-	if (WRT_verbose)
-		printf(PRG_NAME "\n");
+	VERBOSE((PRG_NAME "\n"));
 
 	clock_t start_time;  // in ticks
     start_time=clock();
@@ -369,8 +409,12 @@ int main(int argc, char* argv[])
 	if (argc-optCount<2)
 	{
 		usage();
+//		VERBOSE(("sizeof(void*)=%d\n",sizeof(void*));
 		return 0;
 	};
+
+	XWRT_Encoder xml_wrt;
+	XWRT_Decoder xml_wrtd;
 
 	int curr=optCount+1;
 
@@ -379,7 +423,7 @@ int main(int argc, char* argv[])
 #ifdef WINDOWS
 		createFileList(argv[curr]);
 #else
-		processFile(argv[curr], WRT_verbose, argc, argv);
+		processFile(argv[curr], argc, argv);
 #endif
 		curr++;
 	}	
@@ -387,14 +431,15 @@ int main(int argc, char* argv[])
 #ifdef WINDOWS
 	std::vector<std::string>::iterator it;
 	if (list.size()<=0)
-		printf("Can't open input file(s)\n");
+		VERBOSE(("Can't open input file(s)\n"));
 	else
 	for (it=list.begin(); it!=list.end(); it++)
-		processFile((char*)it->c_str(), WRT_verbose, argc, argv);
+		processFile((char*)it->c_str(), argc, argv, xml_wrt, xml_wrtd);
+//		VERBOSE(("%s\n",it->c_str());
 #endif
 
-	if (argc>optCount+2)
-	    printf("+ Total time %1.2f sec\n",double(clock()-start_time)/CLOCKS_PER_SEC);
+	if (argc>optCount+2 || list.size()>1)
+	    VERBOSE(("+ Total time %1.2f sec\n",double(clock()-start_time)/CLOCKS_PER_SEC));
 
 	return 0;
 };

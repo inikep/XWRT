@@ -38,7 +38,7 @@ private:
 	void write_dict(int comprLevel);
 	int WRT_detectFileType();
 	void WRT_detectFinish();
-	void WRT_get_options(int& c,int& c2);
+	void WRT_get_options(int& c,int& c2,int& c3);
 	inline void readGetcBuffer(FILE* &file,int &c);
 
 	unsigned char utf8buff[4];

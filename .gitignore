@@ -2,6 +2,9 @@
 _codelite/
 PPMVC/
 
+# Archives
+*.zip
+
 # Object files
 *.o
 *.ko
@@ -17,6 +20,7 @@ PPMVC/
 *.dylib
 
 # Executables
+*.
 *.exe
 *.out
 *.app

@@ -1,7 +1,6 @@
 #include "XWRT.h"
 #include "MemBuffer.h"
 #include <stdlib.h> 
-#include <stdint.h> 
 #include <memory.h>
 #include "Common.h"
 
@@ -80,6 +79,8 @@ inline void CMemoryBuffer::AllocSrcBuf( unsigned int len )
 	SourceBuf = (unsigned char*) malloc(SrcLen);
 	if (SourceBuf==NULL)
 		OUT_OF_MEMORY();
+
+//	fread( SourceBuf, 1, SrcLen, SourceFile );
 }
 	
 inline void CMemoryBuffer::AllocTgtBuf( unsigned int len )
@@ -251,7 +252,7 @@ void CContainers::writeMemBuffers(int preprocFlag, int PPMDlib_order, int comprL
 		int count;
 		
 		count=(int)memmap.size();
-		Size=new unsigned size_t[count];
+		Size=new size_t[count];
 		Data=(unsigned char**) malloc(sizeof(unsigned char*)*count);
 		if (Data==NULL)
 			OUT_OF_MEMORY();
@@ -356,7 +357,11 @@ void CContainers::writeMemBuffers(int preprocFlag, int PPMDlib_order, int comprL
 					PUTC(fileLen>>16);
 					PUTC(fileLen>>8);
 					PUTC(fileLen);
+//					fprintf(fileout, "%c%c%c%c", fileLen>>24, fileLen>>16, fileLen>>8, fileLen);
 
+//					for (unsigned int i=0; i<it->second->TgtPtr; i++)
+//						PUTC(it->second->TargetBuf[i]);
+//					fwrite(it->second->TargetBuf,1,it->second->TgtPtr,XWRT_fileout);
 					fwrite_fast(it->second->TargetBuf,it->second->TgtPtr,XWRT_fileout);
 
 					lenCompr+=fileLen;
@@ -603,7 +608,7 @@ void CContainers::readMemBuffers(int preprocFlag, int maxMemSize, int PPMDlib_or
 				buf+=fileLen;
 				len+=fileLen;
 				lenCompr+=i;
-				bufLen-=fileLen;
+				bufLen-=fileLen;			
 			}
 			else
 #endif
@@ -619,6 +624,9 @@ void CContainers::readMemBuffers(int preprocFlag, int maxMemSize, int PPMDlib_or
 				lenCompr+=fileLen;
 				memout_tmp->AllocSrcBuf(fileLen);
 
+//				for (unsigned int i=0; i<memout_tmp->SrcLen; i++)
+//					GETC(memout_tmp->SourceBuf[i]);
+//				fread(memout_tmp->SourceBuf,1,memout_tmp->SrcLen,XWRT_file);
 				fread_fast(memout_tmp->SourceBuf,memout_tmp->SrcLen,XWRT_file);
 
 				printStatus(fileLen,0,false);
@@ -688,7 +696,8 @@ int Zlib_compress(FILE* fileout,Byte *uncompr, uLong uncomprLen,Byte *compr, uLo
 	do
 	{
 	    err = deflate(&c_stream, Z_FINISH);
-		fprintf(fileout, "%c%c%c", (uint8_t)(c_stream.total_out>>16)%256, (uint8_t)(c_stream.total_out>>8)%256, (uint8_t)(c_stream.total_out)%256);
+		fprintf(fileout, "%c%c%c", (c_stream.total_out>>16)%256, (c_stream.total_out>>8)%256, (c_stream.total_out)%256);
+//		fwrite(compr, 1, c_stream.total_out, fileout);
 		fwrite_fast(compr, c_stream.total_out, fileout);
 		outSize+=c_stream.total_out;
 		printStatus(0,c_stream.total_out,true);
@@ -731,17 +740,19 @@ int Zlib_decompress(FILE* file,Byte *compr, uLong comprLen,Byte *uncompr, uLong 
 
 		if ((int)comprLen<fileLen)
 		{
-			printf("error: comprLen(%d)<fileLen(%d)\n",(int)comprLen,(int)fileLen);
+			VERBOSE(("error: comprLen(%d)<fileLen(%d)\n",comprLen,fileLen));
 			OUT_OF_MEMORY();
 		}
 
 		fread_fast((unsigned char*)compr,fileLen,file);
 
+//		/*size_t rd=*/fread(compr,1,fileLen,file);
 		d_stream.next_in  = compr;
 		d_stream.avail_in = fileLen; //(int) rd;
 
 		err = inflate(&d_stream, Z_FINISH);
 
+//        if (err == Z_STREAM_END) 
         if (err != Z_BUF_ERROR) 
 			break; 
     }
@@ -757,7 +768,7 @@ int Zlib_decompress(FILE* file,Byte *compr, uLong comprLen,Byte *uncompr, uLong 
 
 #endif
 
-void CContainers::selectMemBuffer(unsigned char* s,int s_size)
+void CContainers::selectMemBuffer(unsigned char* s,int s_size, bool full_path)
 {
 	while ((s[0]==' ' || s[0]=='<') && s_size>0)
 	{
@@ -781,6 +792,8 @@ void CContainers::selectMemBuffer(unsigned char* s,int s_size)
 	it=memmap.find(str);
 	
 	mem_stack.push_back(memout);
+
+	PRINT_STACK(("selectMemBuffer mem_stack=%d str=%s\n",mem_stack.size(),str.c_str()));
 
 	if (it!=memmap.end())
 		memout=it->second;

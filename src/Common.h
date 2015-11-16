@@ -2,8 +2,6 @@
 #define common_h_included
 
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include <vector>
 #include "MemBuffer.h"
 
@@ -14,37 +12,39 @@ public:
 	XWRT_Common(int fileBufferSize=17); // 128 kb
 	~XWRT_Common();
 
-	int defaultSettings(int argc, char* argv[]);
 	unsigned int flen( FILE* &f );
 	void getAlgName(std::string& compName);
+	int defaultSettings(int argc, char* argv[]);
+	int setSettings(EPreprocessType p_preprocType, EFileType p_fileType, EDictionaryType p_dictType);
+	bool init_dict(unsigned char* dictName);
+    std::string getSourcePath();
 
 	CContainers cont;
-	bool deleteInputFiles,WRT_verbose,YesToAll;
+	bool deleteInputFiles,YesToAll;
 	EPreprocessType preprocType;
-	int preprocFlag;
-
+	int preprocFlag, compLevel;
+	int detectedSymbols[32];
+    bool decoding;
+    
 protected:
 	void init_PPMD(int fileSizeInMB,int mode);
 	inline void stringHash(const unsigned char *ptr, int len,int& hash);
-	int addWord(unsigned char* &mem,int &i);
+    int addWord(unsigned char* &mem,int &i);
 	unsigned char* loadDynamicDictionary(unsigned char* mem,unsigned char* mem_end);
-	unsigned char* loadDictionary(FILE* file,unsigned char* mem,int word_count);
+	unsigned char* loadDictionary(FILE* file,unsigned char* mem);
 	void loadCharset(FILE* file);
 	void tryAddSymbol(int c);
 	void initializeLetterSet();
 	void initializeCodeWords(int word_count,bool initMem=true);
-	bool initialize(unsigned char* dictName,bool encoding);
 	void WRT_deinitialize();
-
-	int getSourcePath(char* buf, int buf_size);
 	void WRT_print_options();
 	int minSpacesFreq();
 
 	int* word_hash;
 	EPreprocessType codewordType;
 	EWordType subWordType;
-	bool decoding,fileCorrupted,detect,firstWarn;
-	int maxDynDictBuf,minWordFreq,compLevel,maxDictSize,additionalParam,firstPassBlock;
+	bool fileCorrupted,detect,firstWarn;
+	int maxDynDictBuf,minWordFreq,maxDictSize,additionalParam,firstPassBlock;
 	int tryShorterBound,spaces,fileLenMB,beforeWord,PPMDlib_order;
 	int spacesCodeword[256];
 	int spacesCont[256];
@@ -71,7 +71,6 @@ protected:
 	int sym2codeword[256]; 
 	int codeword2sym[256]; 
 	int value[256];
-	int detectedSymbols[32];
 	unsigned char num[16];
 	size_t mFileBufferSize;
 
@@ -87,6 +86,7 @@ public:
 
 size_t fread_fast(unsigned char* dst, int len, FILE* file);
 size_t fwrite_fast(unsigned char* dst, int len, FILE* file);
+void format(std::string& s,const char* formatstring, ...);
 
 extern unsigned char** dict;
 extern int* dictfreq;

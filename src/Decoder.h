@@ -19,9 +19,10 @@ private:
 	inline unsigned char* uint2string(unsigned int x,unsigned char* buf,int size);
 	inline void hook_putc(int& c);
 	void WRT_decode();
+	inline void toLower(unsigned char* s,int &s_size);
 
 	void read_dict();
-	void WRT_set_options(char c,char c2);
+	void WRT_set_options(char c,char c2,char c3);
 	inline int decodeCodeWord(unsigned char* &s,int& c);
 	inline int decodeCodeWord_LZMA(unsigned char* &s,int& c);
 	inline int decodeCodeWord_LZ(unsigned char* &s,int& c);

@@ -17,9 +17,17 @@ unsigned char** dict=NULL;
 int* dictfreq=NULL;
 unsigned char* dictlen=NULL;
 
-XWRT_Common::XWRT_Common(int fileBufferSize) : deleteInputFiles(false), WRT_verbose(false), YesToAll(false), preprocType(LZ77), 
-	fileCorrupted(false), detect(false), firstPassBlock(1), dictmem(NULL), dictmem_end(NULL)
-{ 
+XWRT_Common::XWRT_Common(int fileBufferSize) : preprocType(LZ77), dictmem(NULL),
+	detect(false), dictmem_end(NULL), compLevel(0),
+	fileCorrupted(false), firstPassBlock(1), deleteInputFiles(false), YesToAll(false)
+{
+	memset(spacesCodeword,0,sizeof(spacesCodeword));
+	memset(detectedSymbols,0,sizeof(detectedSymbols));
+	memset(value,0,sizeof(value));
+	memset(addSymbols,0,sizeof(addSymbols));
+	memset(reservedSet,0,sizeof(reservedSet));
+	memset(spacesCont,0,sizeof(spacesCont));
+
 	if (fileBufferSize<10)
 		fileBufferSize=10; // 1 KB
 
@@ -27,6 +35,7 @@ XWRT_Common::XWRT_Common(int fileBufferSize) : deleteInputFiles(false), WRT_verb
 		fileBufferSize=23; // 8 MB
 
 	mFileBufferSize=1<<fileBufferSize;
+
 
 	word_hash=new int[HASH_TABLE_SIZE];
 
@@ -51,13 +60,6 @@ XWRT_Common::~XWRT_Common()
 }
 
 
-int XWRT_Common::minSpacesFreq()
-{
-#ifdef DYNAMIC_DICTIONARY
-	return 300;
-#endif
-	return 300+200*(fileLenMB/5);
-}
 
 // filesize() function
 
@@ -184,10 +186,13 @@ unsigned char* XWRT_Common::loadDynamicDictionary(unsigned char* mem,unsigned ch
 
 
 	int count=sortedDictSize;
+//	VERBOSE(("count=%d %d\n",count,sortedDict.size());
 
 	for (i=0; i<count; i++)
 	{
 		std::string s=sortedDict[i];
+
+	//	VERBOSE(("i=%d %s %p/%p\n",i,s.c_str(),mem,mem_end);
 
 		int len=(int)sortedDict[i].size();
 		memcpy(mem,sortedDict[i].c_str(),len+1);
@@ -219,7 +224,7 @@ unsigned char* XWRT_Common::loadDynamicDictionary(unsigned char* mem,unsigned ch
 	return mem;
 }
 
-unsigned char* XWRT_Common::loadDictionary(FILE* file,unsigned char* mem,int word_count)
+unsigned char* XWRT_Common::loadDictionary(FILE* file,unsigned char* mem)
 {
 	unsigned char* word;
 	int c,i;
@@ -272,12 +277,13 @@ void XWRT_Common::loadCharset(FILE* file)
 }
 
 
-
 void XWRT_Common::tryAddSymbol(int c)
 {
 	if (!decoding)
 	{
-		if (value[c]<500+200*(fileLenMB/5))
+//		VERBOSE(("lenKB=%d %d=%d %d<%d\n",fileLenKB,c,value[c]<50+50*fileLenMB,value[c],50+50*fileLenMB);
+//		if (value[c]<500+200*(fileLenMB/5))
+		if (value[c]<50+50*fileLenMB)
 		{
 			addSymbols[c]=1;
 			detectedSymbols[detectedSym++]=1;
@@ -287,6 +293,11 @@ void XWRT_Common::tryAddSymbol(int c)
 	}
 	else
 		addSymbols[c]=detectedSymbols[detectedSym++];
+}
+
+int XWRT_Common::minSpacesFreq()
+{
+	return 300+200*(fileLenMB/5);
 }
 
 
@@ -352,7 +363,6 @@ void XWRT_Common::initializeLetterSet()
 			whiteSpaceSet[c]=0;
 }
 
-
 void XWRT_Common::initializeCodeWords(int word_count,bool initMem)
 {
 	int c,charsUsed,i;
@@ -372,27 +382,40 @@ void XWRT_Common::initializeCodeWords(int word_count,bool initMem)
 
 	if (IF_OPTION(OPTION_ADD_SYMBOLS_MISC))
 	{
+		tryAddSymbol('&'); //38
+		tryAddSymbol('('); //40
+		tryAddSymbol(')'); //41
+		tryAddSymbol(','); //44
+		tryAddSymbol('-'); //45
+		tryAddSymbol('.'); //46
+		tryAddSymbol('/'); //47  
+		tryAddSymbol(':'); //58
+
+		tryAddSymbol('='); //61
+		tryAddSymbol('_'); //95
+		tryAddSymbol(127); //127
+		tryAddSymbol('$'); //36
+		tryAddSymbol('^'); //94
+		tryAddSymbol('`'); //96
+		tryAddSymbol('['); //91
+		tryAddSymbol(']'); //93
+
+		tryAddSymbol('!'); //33
+		tryAddSymbol('#'); //35
+		tryAddSymbol('?'); //63
 		tryAddSymbol(9); //tab 
-		tryAddSymbol(127);
-		tryAddSymbol('!');
-		tryAddSymbol('#');
-		tryAddSymbol('$');
-		tryAddSymbol('%');
-		tryAddSymbol('\'');
-		tryAddSymbol('*');
-		tryAddSymbol('+');
-		tryAddSymbol(';');
-		tryAddSymbol('?');
-		tryAddSymbol('@');
-		tryAddSymbol('[');
-		tryAddSymbol('\\');
-		tryAddSymbol(']');
-		tryAddSymbol('^');
-		tryAddSymbol('`');
-		tryAddSymbol('{');
-		tryAddSymbol('|');
-		tryAddSymbol('}');
-		tryAddSymbol('~'); 
+		tryAddSymbol('%'); //37
+		tryAddSymbol('\''); //39
+		tryAddSymbol('+'); //43
+		tryAddSymbol(';'); //59
+
+		tryAddSymbol('@'); //64
+		tryAddSymbol('|'); //124
+		tryAddSymbol('~'); //126
+		tryAddSymbol('*'); //42
+		tryAddSymbol('\\'); //92
+		tryAddSymbol('{'); //123
+		tryAddSymbol('}'); //125
 	}
 
 	if (IF_OPTION(OPTION_ADD_SYMBOLS_0_5))
@@ -407,9 +430,6 @@ void XWRT_Common::initializeCodeWords(int word_count,bool initMem)
 	{
 		if (c==CHAR_ESCAPE || c==CHAR_FIRSTUPPER || c==CHAR_UPPERWORD || c==CHAR_END_TAG || c==CHAR_END_TAG_EOL
 			|| (IF_OPTION(OPTION_CRLF) && c==CHAR_CRLF) 
-#ifdef DYNAMIC_DICTIONARY
-			|| (!IF_OPTION(OPTION_LETTER_CONTAINER) && c==CHAR_NEWWORD)
-#endif
 			|| (IF_OPTION(OPTION_SPACELESS_WORDS) && c==CHAR_NOSPACE)
 			|| c==CHAR_HOURMINSEC || c==CHAR_HOURMIN || c==CHAR_IP || c==CHAR_PAGES || c==CHAR_DATE_ENG || c==CHAR_TIME || c==CHAR_REMAIN)
 		{
@@ -586,7 +606,7 @@ void XWRT_Common::initializeCodeWords(int word_count,bool initMem)
 
 
 // read dictionary from files to arrays
-bool XWRT_Common::initialize(unsigned char* dictName,bool encoding)
+bool XWRT_Common::init_dict(unsigned char* dictName)
 {
 	int i,c,fileLen;
 	FILE* file;
@@ -597,11 +617,7 @@ bool XWRT_Common::initialize(unsigned char* dictName,bool encoding)
 
 	if (!IF_OPTION(OPTION_USE_DICTIONARY))
 	{
-#ifdef DYNAMIC_DICTIONARY
-		dict123size=240000;
-#else
 		dict123size=sortedDictSize;
-#endif
 		if (dict123size<20)
 			dict123size=20;
 
@@ -619,13 +635,12 @@ bool XWRT_Common::initialize(unsigned char* dictName,bool encoding)
 	}
 	else
 	{
-		if (WRT_verbose)
-			printf("- loading dictionary %s\n",dictName); 
+		VERBOSE(("- loading dictionary %s\n",dictName)); 
 
 		file=fopen((const char*)dictName,"rb");
 		if (file==NULL)
 		{
-			printf("Can't open dictionary %s\n",dictName);
+			VERBOSE(("Can't open dictionary %s\n",dictName));
 			return false;
 		}
 
@@ -641,11 +656,7 @@ bool XWRT_Common::initialize(unsigned char* dictName,bool encoding)
 			loadCharset(file);
 		}
 
-#ifdef DYNAMIC_DICTIONARY
-		dict123size+=240000;
-#else
 		dict123size+=sortedDictSize;
-#endif
 
 		initializeCodeWords(dict123size);
 		int dicsize=fileLen*2+dict123size*WORD_AVG_SIZE*2;
@@ -658,13 +669,12 @@ bool XWRT_Common::initialize(unsigned char* dictName,bool encoding)
 
 		sizeDict=1;
 		mem=loadDynamicDictionary(dictmem,dictmem_end);
-		mem=loadDictionary(file,mem,dictionary);
+		mem=loadDictionary(file,mem);
 
 		fclose(file);
 	}
 
-	if (WRT_verbose)
-		printf(" + loaded dictionary %d/%d words\n",sizeDict,dictionary);
+	VERBOSE((" + loaded dictionary %d/%d words\n",sizeDict,dictionary));
 
 	return true;
 }
@@ -698,18 +708,21 @@ void XWRT_Common::WRT_deinitialize()
 
 void XWRT_Common::WRT_print_options()
 {
-	if (IF_OPTION(OPTION_UNICODE_LE) || IF_OPTION(OPTION_UNICODE_BE)) PRINT_DICT(("UNICODE "));
-	if (IF_OPTION(OPTION_BINARY_DATA)) PRINT_DICT(("BINARY_DATA "));
-	if (IF_OPTION(OPTION_USE_DICTIONARY)) PRINT_DICT(("USE_DICTIONARY "));
-	if (IF_OPTION(OPTION_SPACELESS_WORDS)) PRINT_DICT(("SPACELESS "));
-	if (IF_OPTION(OPTION_SPACES_MODELING)) PRINT_DICT(("SPACES_MODELING "));
-	if (IF_OPTION(OPTION_TRY_SHORTER_WORD)) PRINT_DICT(("TRY_SHORTER "));
-	if (IF_OPTION(OPTION_NUMBER_CONTAINER)) PRINT_DICT(("NUMBER_CONTAINER "));
-	if (IF_OPTION(OPTION_ADD_SYMBOLS_14_31)) PRINT_DICT(("ADD_SYMBOLS_14_31 "));
-	if (IF_OPTION(OPTION_ADD_SYMBOLS_0_5)) PRINT_DICT(("ADD_SYMBOLS_0_5 "));
-	if (IF_OPTION(OPTION_SPACELESS_WORDS)) PRINT_DICT(("SPACELESS_WORDS "));
-	if (IF_OPTION(OPTION_ZLIB)) PRINT_DICT(("ZLIB "));
-	PRINT_DICT(("prepType=%d\n",preprocType));
+	if (IF_OPTION(OPTION_UNICODE_LE) || IF_OPTION(OPTION_UNICODE_BE)) PRINT_OPTIONS(("UNICODE "));
+	if (IF_OPTION(OPTION_BINARY_DATA)) PRINT_OPTIONS(("BINARY_DATA "));
+	if (IF_OPTION(OPTION_USE_DICTIONARY)) PRINT_OPTIONS(("USE_DICTIONARY "));
+	if (IF_OPTION(OPTION_SPACELESS_WORDS)) PRINT_OPTIONS(("SPACELESS "));
+	if (IF_OPTION(OPTION_SPACES_MODELING)) PRINT_OPTIONS(("SPACES_MODELING "));
+	if (IF_OPTION(OPTION_TRY_SHORTER_WORD)) PRINT_OPTIONS(("TRY_SHORTER "));
+	if (IF_OPTION(OPTION_NUMBER_CONTAINER)) PRINT_OPTIONS(("NUMBER_CONTAINER "));
+	if (IF_OPTION(OPTION_ADD_SYMBOLS_14_31)) PRINT_OPTIONS(("ADD_SYMBOLS_14_31 "));
+	if (IF_OPTION(OPTION_ADD_SYMBOLS_0_5)) PRINT_OPTIONS(("ADD_SYMBOLS_0_5 "));
+	if (IF_OPTION(OPTION_ZLIB)) PRINT_OPTIONS(("ZLIB "));
+	if (IF_OPTION(OPTION_END_TAG_OMISSION)) PRINT_OPTIONS(("HTML "));
+	if (IF_OPTION(OPTION_QUOTES_MODELING)) PRINT_OPTIONS(("QUOTES_MODELING "));
+    if (IF_OPTION(OPTION_CRLF)) PRINT_OPTIONS(("CRLF "));
+	if (IF_OPTION(OPTION_LETTER_CONTAINER)) PRINT_OPTIONS(("RAREWORDS "));
+	PRINT_OPTIONS(("prepType=%d\n",preprocType));
 }
 
 void XWRT_Common::init_PPMD(int fileSizeInMB,int mode)
@@ -754,6 +767,7 @@ void XWRT_Common::getAlgName(std::string& compName)
 {
 	if (IF_OPTION(OPTION_PAQ))
 	{
+
 		switch (additionalParam)
 		{
 			case 5:
@@ -773,8 +787,9 @@ void XWRT_Common::getAlgName(std::string& compName)
 				break;
 		}
 
+
 #ifndef USE_PAQ_LIBRARY
-		printf("lpaq6 compression not supported (in this compilation of XWRT)!\n");
+		VERBOSE(("lpaq6 compression not supported (in this compilation of XWRT)!\n"));
 		exit(0);
 #endif
 	}
@@ -790,7 +805,7 @@ void XWRT_Common::getAlgName(std::string& compName)
 			compName="PPMD 64MB";
 
 #ifndef USE_PPMD_LIBRARY
-		printf("PPMD compression not supported (in this compilation of XWRT)!\n");
+		VERBOSE(("PPMD compression not supported (in this compilation of XWRT)!\n"));
 		exit(0);
 #endif
 	}
@@ -806,7 +821,7 @@ void XWRT_Common::getAlgName(std::string& compName)
 			compName="LZMA 8MB";
 
 #ifndef USE_LZMA_LIBRARY
-		printf("LZMA compression not supported (in this compilation of XWRT)!\n");
+		VERBOSE(("LZMA compression not supported (in this compilation of XWRT)!\n"));
 		exit(0);
 #endif
 	}
@@ -822,7 +837,7 @@ void XWRT_Common::getAlgName(std::string& compName)
 			compName="zlib best";
 
 #ifndef USE_ZLIB_LIBRARY
-		printf("Zlib compression not supported (in this compilation of XWRT)!\n");
+		VERBOSE(("Zlib compression not supported (in this compilation of XWRT)!\n"));
 		exit(0);
 #endif
 	}
@@ -830,35 +845,42 @@ void XWRT_Common::getAlgName(std::string& compName)
 		compName="store";
 }
 
+
 int XWRT_Common::defaultSettings(int argc, char* argv[])
 {
+    PRINT_OPTIONS(("defaultSettings\n"));
+
 	static bool firstTime=true;
 	bool minWordFreqChanged=false;
-    minWordFreqChanged = minWordFreqChanged; // ignore warnings
-    
+
 	RESET_OPTIONS;
 	codewordType=preprocType;
 
+//	TURN_ON(OPTION_USE_DICTIONARY);
+//	TURN_ON(OPTION_QUOTES_MODELING);
+//	TURN_ON(OPTION_CRLF);
 	TURN_ON(OPTION_TRY_SHORTER_WORD);
 	TURN_ON(OPTION_SPACES_MODELING);
 #ifdef USE_ZLIB_LIBRARY
 	TURN_ON(OPTION_ZLIB);
+	additionalParam=6; // zlib normal
+    compLevel = 2;
 #endif
 
 	tryShorterBound=2;
 	maxMemSize=8*1024*1024;
 	maxDynDictBuf=8;
-	additionalParam=6; // zlib normal
 	maxDictSize=65535*32700;
 	compName="zlib normal";
 
 	switch (preprocType)
 	{
+		case NONE:
 		case LZ77: // for LZ77 there are different codeWords
 			TURN_ON(OPTION_SPACELESS_WORDS);
 			TURN_ON(OPTION_ADD_SYMBOLS_0_5);
 			TURN_ON(OPTION_ADD_SYMBOLS_14_31);
-			TURN_ON(OPTION_ADD_SYMBOLS_MISC);
+		//	TURN_ON(OPTION_ADD_SYMBOLS_MISC);
 			TURN_ON(OPTION_USE_CONTAINERS);
 			minWordFreq=6;
 			TURN_ON(OPTION_NUMBER_CONTAINER);
@@ -867,6 +889,9 @@ int XWRT_Common::defaultSettings(int argc, char* argv[])
 		case LZMA: // for LZMA there are different codeWords 
 			TURN_ON(OPTION_USE_CONTAINERS);
 			TURN_ON(OPTION_SPACELESS_WORDS);
+//			TURN_ON(OPTION_ADD_SYMBOLS_0_5);
+//			TURN_ON(OPTION_ADD_SYMBOLS_14_31);
+//			TURN_ON(OPTION_ADD_SYMBOLS_MISC);
 			minWordFreq=6;
 			TURN_ON(OPTION_NUMBER_CONTAINER);
 			break;
@@ -891,12 +916,37 @@ int XWRT_Common::defaultSettings(int argc, char* argv[])
 	{
 		switch (argv[1][1])
 		{
+			case 'h':
+				if (argv[1][0]=='+')
+				{
+                    minWordFreq=100000;
+                    TURN_ON(OPTION_QUOTES_MODELING);
+                    TURN_ON(OPTION_CRLF);
+                    TURN_ON(OPTION_END_TAG_OMISSION);
+                    TURN_ON(OPTION_USE_DICTIONARY); // +d
+                    TURN_OFF(OPTION_ADD_SYMBOLS_MISC);
+                    TURN_OFF(OPTION_USE_CONTAINERS); // -c
+                    TURN_OFF(OPTION_LETTER_CONTAINER); // -w
+                    TURN_OFF(OPTION_SPACES_MODELING); // -s
+
+					if (firstTime)
+						VERBOSE(("* Turn on HTML optimization\n"));
+				}
+				break;
+			case 'r':
+				if (argv[1][0]=='+')
+				{
+					TURN_ON(OPTION_RTF_SUPPORT);
+					if (firstTime)
+						VERBOSE(("* Turn on RTF optimization\n"));
+				}
+				break;
 			case 'o':
 				if (argv[1][0]=='-')
 				{
 					YesToAll=true;
 					if (firstTime)
-						printf("* Force overwrite of output files is turned on\n");
+						VERBOSE(("* Force overwrite of output files is turned on\n"));
 				}
 				break;
 			case 'i':
@@ -904,7 +954,7 @@ int XWRT_Common::defaultSettings(int argc, char* argv[])
 				{
 					deleteInputFiles=true;
 					if (firstTime)
-						printf("* Delete input files is turned on\n");
+						VERBOSE(("* Delete input files is turned on\n"));
 				}
 				break;
 			case 'e':
@@ -912,7 +962,7 @@ int XWRT_Common::defaultSettings(int argc, char* argv[])
 				{
 					maxDictSize=CLAMP(atoi(argv[1]+2),0,65535*32700);
 					if (firstTime)
-						printf("* Maximum dictionary size is %d\n",maxDictSize);
+						VERBOSE(("* Maximum dictionary size is %d\n",maxDictSize));
 				}
 				break;
 			case 'f':
@@ -921,7 +971,7 @@ int XWRT_Common::defaultSettings(int argc, char* argv[])
 					minWordFreq=CLAMP(atoi(argv[1]+2),1,65535);
 					minWordFreqChanged=true;
 					if (firstTime)
-						printf("* Minimal word frequency is %d\n",minWordFreq);
+						VERBOSE(("* Minimal word frequency is %d\n",minWordFreq));
 				}
 				break;
 			case 'm':
@@ -930,8 +980,7 @@ int XWRT_Common::defaultSettings(int argc, char* argv[])
 					maxMemSize=CLAMP(atoi(argv[1]+2),1,255);
 
 					if (firstTime)
-						printf("* Maximum memory buffer size is %d MB\n",maxMemSize);
-
+						VERBOSE(("* Maximum memory buffer size is %d MB\n",maxMemSize));
 					maxMemSize*=1024*1024;
 				}
 				break;
@@ -942,7 +991,7 @@ int XWRT_Common::defaultSettings(int argc, char* argv[])
 					maxDynDictBuf=CLAMP(atoi(argv[1]+2),1,255);
 
 					if (firstTime)
-						printf("* Maximum buffer for creating dynamic dictionary size is %d MB\n",maxDynDictBuf);
+						VERBOSE(("* Maximum buffer for creating dynamic dictionary size is %d MB\n",maxDynDictBuf));
 				}
 				break;
 
@@ -952,7 +1001,7 @@ int XWRT_Common::defaultSettings(int argc, char* argv[])
 					compLevel=CLAMP(atoi(argv[1]+2),0,14);
 
 					if (firstTime)
-						printf("* Compression level=%d\n",compLevel);
+						VERBOSE(("* Compression level=%d\n",compLevel));
 
 					TURN_OFF(OPTION_ZLIB);
 					TURN_OFF(OPTION_LZMA);
@@ -983,7 +1032,7 @@ int XWRT_Common::defaultSettings(int argc, char* argv[])
 						case 1:
 						case 2:
 						case 3:
-							printf("warning: ZLIB compression not supported in this compilation!\n");
+							VERBOSE(("warning: ZLIB compression not supported in this compilation!\n"));
 							break;
 #endif
 #ifdef USE_LZMA_LIBRARY
@@ -1005,7 +1054,7 @@ int XWRT_Common::defaultSettings(int argc, char* argv[])
 						case 4:
 						case 5:
 						case 6:
-							printf("warning: LZMA compression not supported in this compilation!\n");
+							VERBOSE(("warning: LZMA compression not supported in this compilation!\n"));
 							break;
 #endif
 #ifdef USE_PPMD_LIBRARY
@@ -1039,7 +1088,7 @@ int XWRT_Common::defaultSettings(int argc, char* argv[])
 						case 7:
 						case 8:
 						case 9:
-							printf("warning: PPMD compression not supported in this compilation!\n");
+							VERBOSE(("warning: PPMD compression not supported in this compilation!\n"));
 							break;
 #endif
 #ifdef USE_PAQ_LIBRARY
@@ -1074,7 +1123,7 @@ int XWRT_Common::defaultSettings(int argc, char* argv[])
 						case 12:
 						case 13:
 						case 14:
-							printf("warning: lpaq6 compression not supported in this compilation!\n");
+							VERBOSE(("warning: lpaq6 compression not supported in this compilation!\n"));
 							break;
 #endif
 					}
@@ -1086,7 +1135,7 @@ int XWRT_Common::defaultSettings(int argc, char* argv[])
 				if (argv[1][0]=='-')
 				{
 					if (firstTime)
-						printf("* Spaces modeling is off\n");
+						VERBOSE(("* Spaces modeling is off\n"));
 					TURN_OFF(OPTION_SPACES_MODELING);
 				}
 				break;
@@ -1094,7 +1143,7 @@ int XWRT_Common::defaultSettings(int argc, char* argv[])
 				if (argv[1][0]=='+')
 				{
 					if (firstTime)
-						printf("* Use static dictionary option is on\n");
+						VERBOSE(("* Use static dictionary option is on\n"));
 					TURN_ON(OPTION_USE_DICTIONARY);
 				}
 				break;
@@ -1102,7 +1151,7 @@ int XWRT_Common::defaultSettings(int argc, char* argv[])
 				if (argv[1][0]=='-')
 				{
 					if (firstTime)
-						printf("* Try shoter word option is off\n");
+						VERBOSE(("* Try shoter word option is off\n"));
 					TURN_OFF(OPTION_TRY_SHORTER_WORD);
 				}
 				break;
@@ -1110,15 +1159,23 @@ int XWRT_Common::defaultSettings(int argc, char* argv[])
 				if (argv[1][0]=='-')
 				{
 					if (firstTime)
-						printf("* Use containers is off\n");
+						VERBOSE(("* Use containers is off\n"));
 					TURN_OFF(OPTION_USE_CONTAINERS);
+				}
+				break;
+			case 'a':
+				if (argv[1][0]=='-')
+				{
+					if (firstTime)
+						VERBOSE(("* Spaceless word model is off\n"));
+					TURN_OFF(OPTION_SPACELESS_WORDS);
 				}
 				break;
 			case 'n':
 				if (argv[1][0]=='-')
 				{
 					if (firstTime)
-						printf("* Number encoding is off\n");
+						VERBOSE(("* Number encoding is off\n"));
 					TURN_OFF(OPTION_NUMBER_CONTAINER);
 				}
 				break;
@@ -1126,7 +1183,7 @@ int XWRT_Common::defaultSettings(int argc, char* argv[])
 				if (argv[1][0]=='-')
 				{
 					if (firstTime)
-						printf("* Word conntainers are off\n");
+						VERBOSE(("* Word conntainers are off\n"));
 					TURN_OFF(OPTION_LETTER_CONTAINER);
 				}
 				break;
@@ -1135,13 +1192,21 @@ int XWRT_Common::defaultSettings(int argc, char* argv[])
 				{
 					firstPassBlock=CLAMP(atoi(argv[1]+2),1,255);
 					if (firstTime)
-						printf("* Preprocess only (file_size/%d) bytes in a first pass\n",firstPassBlock);
+						VERBOSE(("* Preprocess only (file_size/%d) bytes in a first pass\n",firstPassBlock));
+				}
+				else
+				if (argv[1][0]=='+')
+				{
+					TURN_ON(OPTION_PDF_SUPPORT);
+					if (firstTime)
+						VERBOSE(("* Turn on PDF optimization\n"));
 				}
 				break;
 			case '0':
 			case '1':
 			case '2':
 			case '3':
+                compLevel = 0;
 				TURN_OFF(OPTION_ZLIB);
 				TURN_OFF(OPTION_LZMA);
 				TURN_OFF(OPTION_PPMD);
@@ -1150,17 +1215,17 @@ int XWRT_Common::defaultSettings(int argc, char* argv[])
 				if (firstTime)
 				switch (argv[1][1])
 				{
-					case '0': printf("* LZ77 optimized preprocessing\n"); break;
-					case '1': printf("* LZMA/BWT optimized preprocessing\n"); break;
-					case '2': printf("* PPM optimized preprocessing\n"); break;
-					case '3': printf("* PAQ optimized preprocessing\n"); break;
+					case '0': VERBOSE(("* LZ77 optimized preprocessing\n")); break;
+					case '1': VERBOSE(("* LZMA/BWT optimized preprocessing\n")); break;
+					case '2': VERBOSE(("* PPM optimized preprocessing\n")); break;
+					case '3': VERBOSE(("* PAQ optimized preprocessing\n")); break;
 				}
 
 				newPreprocType=(EPreprocessType)(argv[1][1]-'0');
 				break;
 			default:
 				if (firstTime)
-					printf("* Option %s ignored\n", argv[1]);
+					VERBOSE(("* Option %s ignored\n", argv[1]));
 		}
 		argc--;
 		optCount++;
@@ -1179,12 +1244,16 @@ int XWRT_Common::defaultSettings(int argc, char* argv[])
 }
 
 
-int XWRT_Common::getSourcePath(char* buf, int buf_size)
+
+std::string XWRT_Common::getSourcePath()
 {
+    std::string str;
+	char buf[STRING_MAX_SIZE];
+
 #ifdef WINDOWS
 	int pos;
 
-	pos=GetModuleFileName(NULL,buf,buf_size);
+	pos=GetModuleFileName(NULL,buf,STRING_MAX_SIZE);
 
 	if (pos>0)
 	{	
@@ -1197,17 +1266,16 @@ int XWRT_Common::getSourcePath(char* buf, int buf_size)
 			}
 	}
 
-	return pos;
-#else
-	return 0;
+    str.append(buf, pos);
 #endif
+	return str;
 }
 
 size_t fread_fast(unsigned char* dst, int len, FILE* file)
 {
 	return fread(dst,1,len,file);
 
-	int rd;
+/*	int rd;
 	size_t sum=0;
 
 	while (len > 1<<17) // 128 kb
@@ -1220,14 +1288,14 @@ size_t fread_fast(unsigned char* dst, int len, FILE* file)
 
 	sum+=fread(dst,1,len,file);
 
-	return sum;
+	return sum;*/
 }
 
 size_t fwrite_fast(unsigned char* dst, int len, FILE* file)
 {
 	return fwrite(dst,1,len,file);
 
-	int wt;
+/*	int wt;
 	size_t sum=0;
 
 	while (len > 1<<17) // 128 kb
@@ -1240,5 +1308,22 @@ size_t fwrite_fast(unsigned char* dst, int len, FILE* file)
 
 	sum+=fwrite(dst,1,len,file);
 
-	return sum;
+	return sum;*/
+}
+
+void format(std::string& s,const char* formatstring, ...) 
+{
+   char buff[1024];
+   va_list args;
+   va_start(args, formatstring);
+
+#ifdef WIN32
+   _vsnprintf( buff, sizeof(buff), formatstring, args);
+#else
+   vsnprintf( buff, sizeof(buff), formatstring, args);
+#endif
+
+   va_end(args);
+
+   s=buff;
 }

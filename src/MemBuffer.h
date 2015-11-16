@@ -47,7 +47,7 @@ public:
 	void writeMemBuffers(int preprocFlag, int PPMDlib_order, int comprLevel, Encoder* PAQ_encoder, unsigned char* zlibBuffer,COutFileStream* outStream);
 	void readMemBuffers(int preprocFlag, int maxMemSize, int PPMDlib_order, Encoder* PAQ_encoder, unsigned char* zlibBuffer,CInFileStream* inStream);
 	void freeMemBuffers(bool freeMem);
-	void selectMemBuffer(unsigned char* s,int s_size);
+	void selectMemBuffer(unsigned char* s,int s_size, bool full_path);
 	void MemBufferPopBack();
 
 	CMemoryBuffer *memout,*memout_letters,*memout_ip,*memout_hm,*memout_hms;

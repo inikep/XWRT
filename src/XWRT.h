@@ -1,42 +1,43 @@
 #if !defined xwrt_h_included
 #define xwrt_h_included
 
-#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(WIN64) || defined(_WIN64)
-	#define WINDOWS
-#endif 
+#define XWRT_VERSION 350 // 150-405
 
-//#define __STDC_FORMAT_MACROS // now PRIu64 will work
-#define _FILE_OFFSET_BITS 64  // turn off_t into a 64-bit type for ftello() and fseeko()
-//#include <inttypes.h> 
-
-#define PRG_NAME "XWRT 3.4 (5.11.2007) - XML compressor by P.Skibinski, inikep@gmail.com"
-#define XWRT_VERSION 340 // 150-405
-
+#define PRG_NAME "XWRT 3.5 (31.03.2008) - XML compressor by P.Skibinski, inikep@gmail.com"
+#define XWRT_SHORT "XWRT"
 #define XWRT_HEADER "XWRC"
 #define ADD_FILENAME_EXT ".xwrt" 
+
 #define CUT_FILENAME_CHAR '.'
+#define AFTER_DECOMPRESED_NAME "" // "_"
 
 #define USE_ZLIB_LIBRARY
 #define USE_LZMA_LIBRARY
 #define USE_PPMD_LIBRARY
 #define USE_PAQ_LIBRARY
 
+#define _FILE_OFFSET_BITS 64  // turn off_t into a 64-bit type for ftello()
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(WIN64) || defined(_WIN64)
+	#define WINDOWS
+#endif 
+
+#define VERBOSE(data) printf data
 #define PRINT_CHARS(data) ;//printf data
 #define PRINT_CODEWORDS(data) ;//printf data
 #define PRINT_STACK(data) ;//printf data
 #define PRINT_DICT(data) ;//printf data
 #define PRINT_CONTAINERS(data) ;//printf data
 #define PRINT_STATUS(data) printf data;
+#define PRINT_OPTIONS(data) ;//printf data;
 
 #pragma warning(disable:4244) //  '=' : conversion from ... to ..., possible loss of data
 #pragma warning(disable:4786) // STL warnings
 #pragma warning(disable:4996) // '_getch' was declared deprecated
 #pragma warning(disable:4503) // STL
 #pragma warning(disable:4390) // empty controlled statement found; is this the intent?
-#pragma warning(disable:4018) // signed/unsigned mismatch
+#pragma warning(disable:4018) //  '>' : signed/unsigned mismatch
+#pragma warning(disable:4127) //  conditional expression is constant
 #define _CRT_SECURE_NO_DEPRECATE // VC++ 2005 deprecate warnings
-
-
 
 
 #ifdef WINDOWS
@@ -108,7 +109,9 @@ class Encoder;
 #define OPTION_BINARY_DATA					131072
 #define OPTION_UNICODE_LE					262144
 #define OPTION_UNICODE_BE					524288
-
+#define OPTION_END_TAG_OMISSION				524288*2
+#define OPTION_RTF_SUPPORT					524288*4
+#define OPTION_PDF_SUPPORT					524288*8
 
 #if !defined min
 	#define min(a,b) (((a)>(b))?(b):(a))
@@ -141,15 +144,16 @@ template <class T> inline T CLAMP(const T& X,const T& LoX,const T& HiX) { return
 
 enum EWordType { LOWERWORD, FIRSTUPPER, UPPERWORD, VARWORD, NUMBER, NUMBER2, NUMBER3 };
 enum EXMLState { UNKNOWN, OPEN, CLOSE, CLOSE_EOL, CLOSED, ADDED, ADDED2, INSIDE };
-enum EPreprocessType { LZ77, LZMA, PPM, PAQ };
+enum EPreprocessType { LZ77, LZMA, PPM, PAQ, NONE };
 enum ELetterType { XMLCHAR, LOWERCHAR, UPPERCHAR, UNKNOWNCHAR, RESERVEDCHAR, NUMBERCHAR };
-
+enum EFileType { HTML, PDF, PS, RTF, TEX, TXT, XML };
+enum EDictionaryType { Static, SemiDynamic };
 
 void printStatus(int add_read,int add_written,int encoding);
 
 #define OUT_OF_MEMORY() \
 { \
-	printf("Not enough memory!\n"); \
+	VERBOSE(("Not enough memory!\n")); \
 	exit(0); \
 }
 
