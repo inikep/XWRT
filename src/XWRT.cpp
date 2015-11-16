@@ -256,31 +256,12 @@ void processFile(char* filename,int argc, char* argv[],XWRT_Encoder &xml_wrt, XW
 	{
         xml_wrtd.YesToAll=YesToAll;
         xml_wrtd.defaultSettings(argc,argv);
-
-/*        if (first_decode)
-        {
-            first_decode=false;
-            xml_wrt.decoding=true;
-            if (!xml_wrtd.init_dict((unsigned char*)(xml_wrt.getSourcePath() + "wrt-eng.dic").c_str()))
-                return;
-        }*/
-
         start_decode(xml_wrtd,file,filename);
 	}
 	else
 	{
         xml_wrt.YesToAll=YesToAll;
         xml_wrt.defaultSettings(argc,argv);
-
-/*        if (first_encode)
-        {
-            first_encode=false;
-            memset(xml_wrt->detectedSymbols,0,sizeof(xml_wrt->detectedSymbols));
-            xml_wrt->decoding=false;
-            if (!xml_wrt->init_dict((unsigned char*)(xml_wrt.getSourcePath() + "wrt-eng.dic").c_str()))
-                return;
-        }*/
-
         start_encode(xml_wrt,file,filename);
 	}
 }
@@ -423,7 +404,7 @@ int main(int argc, char* argv[])
 #ifdef WINDOWS
 		createFileList(argv[curr]);
 #else
-		processFile(argv[curr], argc, argv);
+		processFile(argv[curr], argc, argv, xml_wrt, xml_wrtd);
 #endif
 		curr++;
 	}	
