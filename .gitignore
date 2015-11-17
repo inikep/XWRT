@@ -2,6 +2,9 @@
 _codelite/
 PPMVC/
 
+# Archives
+*.zip
+
 # Object files
 *.o
 *.ko
