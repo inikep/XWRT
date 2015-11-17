@@ -65,4 +65,4 @@ xwrt: $(LZMA_FILES) $(ZLIB_FILES) src/XWRT.o src/Encoder.o src/Decoder.o src/Mem
 	$(GPP) $(CFLAGS) $< -c -o $@
 
 clean:
-	rm -f LZMA/*.o LZMA/Windows/*.o LZMA/Common/*.o LZMA/7zip/Common/*.o LZMA/7zip/Compress/LZ/*.o LZMA/7zip/Compress/RangeCoder/*.o zlib/*.o src/*.o PPMd/*.o *.o *.exe
+	rm -f xwrt.exe xwrt LZMA/*.o LZMA/Windows/*.o LZMA/Common/*.o LZMA/7zip/Common/*.o LZMA/7zip/Compress/LZ/*.o LZMA/7zip/Compress/RangeCoder/*.o zlib/*.o src/*.o PPMd/*.o *.o
