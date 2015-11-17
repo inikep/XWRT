@@ -41,7 +41,7 @@ XWRT_Common::XWRT_Common(int fileBufferSize) : deleteInputFiles(false), WRT_verb
 XWRT_Common::~XWRT_Common()
 {
 	if (word_hash)
-		delete(word_hash);
+		delete [] word_hash;
 
 	WRT_deinitialize(); 
 

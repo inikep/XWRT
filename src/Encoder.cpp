@@ -31,10 +31,10 @@ XWRT_Encoder::XWRT_Encoder() : utf8cached(0), utf8pos(0), last_c_bak(0)
 XWRT_Encoder::~XWRT_Encoder() 
 { 
 	if (getcBuffer)
-		delete(getcBuffer);
+		delete [] getcBuffer;
 
 	if (zlibBuffer)
-		delete(zlibBuffer);
+		delete [] zlibBuffer;
 }
 
 #define ENCODE_PUTC(c)\
@@ -2888,7 +2888,7 @@ void XWRT_Encoder::sortDict(int size)
 		sortedDict.push_back(str);
 	}
 
-	delete(inttable);
+	delete [] inttable;
 }
 
 

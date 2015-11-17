@@ -251,7 +251,7 @@ void CContainers::writeMemBuffers(int preprocFlag, int PPMDlib_order, int comprL
 		int count;
 		
 		count=(int)memmap.size();
-		Size=new unsigned size_t[count];
+		Size=new size_t[count];
 		Data=(unsigned char**) malloc(sizeof(unsigned char*)*count);
 		if (Data==NULL)
 			OUT_OF_MEMORY();
