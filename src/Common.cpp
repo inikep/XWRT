@@ -50,7 +50,7 @@ XWRT_Common::XWRT_Common(int fileBufferSize) : preprocType(LZ77), dictmem(NULL),
 XWRT_Common::~XWRT_Common()
 {
 	if (word_hash)
-		delete(word_hash);
+		delete [] word_hash;
 
 	WRT_deinitialize(); 
 

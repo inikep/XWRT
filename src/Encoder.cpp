@@ -31,10 +31,10 @@ XWRT_Encoder::XWRT_Encoder() : utf8cached(0), utf8pos(0), last_c_bak(0)
 XWRT_Encoder::~XWRT_Encoder() 
 { 
 	if (getcBuffer)
-		delete(getcBuffer);
+		delete [] getcBuffer;
 
 	if (zlibBuffer)
-		delete(zlibBuffer);
+		delete [] zlibBuffer;
 }
 
 #define ENCODE_PUTC(c)\
@@ -2970,27 +2970,7 @@ void XWRT_Encoder::sortDict(int size)
 		sortedDict.push_back(str);
 	}
 
-	delete(inttable);
-
-/*	qsort(&dict[1],dict1size-1,sizeof(dict[0]),compare_str);
-
-	VERBOSE(("2 %d %d %d %d\n",dict1size,bound3,bound4,size);
-
-	qsort(&dict[dict1size],min(size,bound3)-dict1size,sizeof(dict[0]),compare_str);
-
-	VERBOSE(("3 %d %d %d %d\n",dict1size,bound3,bound4,size);
-
-	if (size>bound3)
-		qsort(&dict[bound3],min(size,bound4)-bound3,sizeof(dict[0]),compare_str);
-
-	VERBOSE(("4 %d %d %d %d\n",dict1size,bound3,bound4,size);
-
-	if (size>bound4)
-		qsort(&dict[bound4],size-bound4,sizeof(dict[0]),compare_str);*/
-
-
-//	for (i=0; i<size; i++)
-//		VERBOSE(("%d=%s\n",i,dict[i]);
+	delete [] inttable;
 }
 
 

@@ -22,10 +22,10 @@ XWRT_Decoder::XWRT_Decoder() : WRTd_s(&WRTd_data[0]), utf8pos(0)
 XWRT_Decoder::~XWRT_Decoder() 
 { 
 	if (putcBuffer)
-		delete(putcBuffer);
+		delete [] putcBuffer;
 
 	if (zlibBuffer)
-		delete(zlibBuffer);
+		delete [] zlibBuffer;
 }
 
 #define WRITE_CHAR(c)\
