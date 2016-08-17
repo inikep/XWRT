@@ -7,15 +7,15 @@ back-end compressor. This idea is based on well-known XML compressor: XMill.
 Moreover XML-WRT creates a semi-dynamic dictionary and replaces frequently 
 used words with shorter codes. There are additional techniques to improve
 compression ratio:
-- word alphabet can consist of start tags (like '<tag>'), urls, e-mails
+- word alphabet can consist of start tags (like `<tag>`), urls, e-mails
 - special model for numbers encoding
 - input XML file is split into containers
 - there are special containers for dates, time, pages and fractional numbers
-- end tags ('</tag>') are replaced with a single char
+- end tags (`</tag>`) are replaced with a single char
 - end tags + EOL symbols can also be replaced with a single char
 - spaceless words model
 - very effective methods for white-space preserving
-- quotes modeling ('="' and '">' replaced with a single char) 
+- quotes modeling (`="` and `">` replaced with a single char) 
 
 
 Comparision to other XML compressors
