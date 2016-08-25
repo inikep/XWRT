@@ -110,8 +110,8 @@ class Encoder;
 #define OPTION_UNICODE_BE					524288
 
 
-#if !defined min
-	#define min(a,b) (((a)>(b))?(b):(a))
+#if !defined MIN
+	#define MIN(a,b) (((a)>(b))?(b):(a))
 #endif
 #define IF_OPTION(option) (preprocFlag & option)
 #define OPTION(option) (xml_wrt.preprocFlag & option)

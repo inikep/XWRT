@@ -12,11 +12,6 @@ typedef unsigned char  U8;
 typedef unsigned short U16;
 typedef unsigned int   U32;
 
-// min, max functions
-#ifndef min
-inline int min(int a, int b) {return a<b?a:b;}
-inline int max(int a, int b) {return a<b?b:a;}
-#endif
 
 template <int B>
 class HashTable {

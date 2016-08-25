@@ -2378,7 +2378,7 @@ void XWRT_Encoder::write_dict(int comprLevel)
 	{
 		cmn=0;
 		if (i>0)
-			cmn=common(sortedDict[i-1].c_str(),sortedDict[i].c_str(),min(sortedDict[i].size(),sortedDict[i-1].size()));
+			cmn=common(sortedDict[i-1].c_str(),sortedDict[i].c_str(),MIN(sortedDict[i].size(),sortedDict[i-1].size()));
 
 		if ((preprocType!=LZ77) && (cmn>0 || (unsigned char)(sortedDict[i][0])>=128))
 			bufferData+=sprintf((char*)bufferData,"%c%s\n",128+cmn,sortedDict[i].c_str()+cmn);
@@ -2810,7 +2810,7 @@ int compare_str_rev( const void *arg1, const void *arg2 )
 	int a=*(int*)arg1;
 	int b=*(int*)arg2;
 
-	int minv=min(dictlen[a],dictlen[b]);
+	int minv=MIN(dictlen[a],dictlen[b]);
 
 	for (int i=1; i<=minv; i++)
 	{
@@ -2870,13 +2870,13 @@ void XWRT_Encoder::sortDict(int size)
 
 	if (preprocType!=LZ77)
 	{
-		qsort(&inttable[0],min(size,dict1size),sizeof(inttable[0]),compare_str);
+		qsort(&inttable[0],MIN(size,dict1size),sizeof(inttable[0]),compare_str);
 		
 		if (size>dict1size)
-			qsort(&inttable[dict1size],min(size,bound3)-dict1size,sizeof(inttable[0]),compare_str);
+			qsort(&inttable[dict1size],MIN(size,bound3)-dict1size,sizeof(inttable[0]),compare_str);
 		
 		if (size>bound3)
-			qsort(&inttable[bound3],min(size,bound4)-bound3,sizeof(inttable[0]),compare_str);
+			qsort(&inttable[bound3],MIN(size,bound4)-bound3,sizeof(inttable[0]),compare_str);
 		
 		if (size>bound4)
 			qsort(&inttable[bound4],size-bound4,sizeof(inttable[0]),compare_str);

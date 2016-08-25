@@ -99,7 +99,7 @@ inline void CMemoryBuffer::ReallocTgtBuf(unsigned int len)
 		OUT_OF_MEMORY();
 
 	NewTargetBuf += 3;
-	memcpy(NewTargetBuf,TargetBuf,min(TgtPtr,len));
+	memcpy(NewTargetBuf,TargetBuf,MIN(TgtPtr,len));
 	TgtLen = len;
 	delete(TargetBuf-3);
 	TargetBuf=NewTargetBuf;
